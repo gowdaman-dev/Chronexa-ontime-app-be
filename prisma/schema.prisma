@@ -1,0 +1,1893 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+model ad_user_tokens {
+  ad_token_id       Int      @id(map: "PK__ad_user___EFA8304A72C2CD80") @default(autoincrement())
+  azure_user_id     String?  @db.NVarChar(100)
+  emp_no            String   @db.NVarChar(50)
+  access_token      String?  @db.NVarChar(Max)
+  refresh_token     String?  @db.NVarChar(Max)
+  email_id          String?  @db.NVarChar(100)
+  is_active         Boolean  @default(true, map: "DF__ad_user_t__is_ac__25A691D2")
+  created_date      DateTime @default(now(), map: "DF__ad_user_t__creat__269AB60B") @db.DateTime
+  last_updated_date DateTime @default(now(), map: "DF__ad_user_t__last___278EDA44") @db.DateTime
+  employee_id       Int
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model aldar_employees {
+  employee_id                       Int?     @db.SmallInt
+  emp_no                            String?  @db.NVarChar(50)
+  firstname_eng                     String?  @db.NVarChar(50)
+  lastname_eng                      String?  @db.NVarChar(50)
+  firstname_arb                     String?  @db.NVarChar(50)
+  lastname_arb                      String?  @db.NVarChar(50)
+  card_number                       String?  @db.NVarChar(50)
+  pin                               String?  @db.NVarChar(50)
+  organization_id                   String?  @db.NVarChar(50)
+  grade_id                          String?  @db.NVarChar(50)
+  designation_id                    String?  @db.NVarChar(50)
+  citizenship_id                    String?  @db.NVarChar(50)
+  employee_type_id                  String?  @db.NVarChar(50)
+  join_date                         String?  @db.NVarChar(50)
+  active_date                       String?  @db.NVarChar(50)
+  inactive_date                     String?  @db.NVarChar(50)
+  national_id                       String?  @db.NVarChar(50)
+  national_id_expiry_date           String?  @db.NVarChar(50)
+  passport_number                   String?  @db.NVarChar(50)
+  passport_expiry_date              String?  @db.NVarChar(50)
+  passport_issue_country_id         String?  @db.NVarChar(50)
+  mobile                            String?  @db.NVarChar(50)
+  email                             String?  @db.NVarChar(50)
+  active_flag                       Int?     @db.TinyInt
+  gender                            String?  @db.NVarChar(50)
+  local_flag                        Int?     @db.TinyInt
+  punch_flag                        Int?     @db.TinyInt
+  on_reports_flag                   Int?     @db.TinyInt
+  email_notifications_flag          String?  @db.NVarChar(50)
+  include_email_flag                Int?     @db.TinyInt
+  open_shift_flag                   Int?     @db.TinyInt
+  overtime_flag                     Int?     @db.TinyInt
+  web_punch_flag                    Int?     @db.TinyInt
+  shift_flag                        Int?     @db.TinyInt
+  check_inout_selfie_flag           Int?     @db.TinyInt
+  calculate_monthly_missed_hrs_flag Int?     @db.TinyInt
+  exclude_from_integration_flag     Int?     @db.TinyInt
+  photo_file_name                   String?  @db.NVarChar(50)
+  manager_flag                      Int?     @db.TinyInt
+  manager_id                        String?  @db.NVarChar(50)
+  inpayroll_flag                    Int?     @db.TinyInt
+  share_roster_flag                 Int?     @db.TinyInt
+  location_id                       String?  @db.NVarChar(50)
+  contract_company_id               String?  @db.NVarChar(50)
+  remarks                           String?  @db.NVarChar(50)
+  geofence_flag                     Boolean?
+  created_id                        Int?     @db.TinyInt
+  created_date                      String?  @db.NVarChar(50)
+  last_updated_id                   Int?     @db.TinyInt
+  last_updated_date                 String?  @db.NVarChar(50)
+  SAP_user_flag                     Int?     @db.TinyInt
+  local_user_flag                   Int?     @db.TinyInt
+
+  @@ignore
+}
+
+model app_setting {
+  app_setting_id    Int       @id(map: "PK__app_sett__54B69AC8DF411621") @default(autoincrement())
+  version_name      String    @unique(map: "UQ__app_sett__EE084CF46EC8D712") @db.NVarChar(40)
+  value             String?   @db.NVarChar(300)
+  descr             String?   @db.NVarChar(300)
+  tab_no            Int?
+  deleted           Int?      @default(0, map: "DF__app_setti__delet__5011CCEA")
+  created_id        Decimal?  @db.Decimal(18, 0)
+  created_date      DateTime? @db.DateTime
+  last_updated_id   Decimal?  @db.Decimal(18, 0)
+  last_updated_date DateTime? @db.DateTime
+}
+
+model attendance_daily {
+  id                  Int       @id(map: "PK__attendan__3213E83F398D45FB") @default(autoincrement())
+  emp_no              String?   @db.VarChar(50)
+  Name                String?   @db.VarChar(200)
+  organization        String?   @db.VarChar(200)
+  parent_organization String?   @db.VarChar(200)
+  department          String?   @db.VarChar(200)
+  employee_type       String?   @db.VarChar(100)
+  WorkDate            DateTime? @db.Date
+  TimeIn              String?   @db.VarChar(20)
+  GeoLocation_In      String?   @db.VarChar(Max)
+  TimeOut             String?   @db.VarChar(20)
+  GeoLocation_Out     String?   @db.VarChar(Max)
+  TotalWorked_Hrs     String?   @db.VarChar(20)
+  Missed_Hrs          String?   @db.VarChar(20)
+  Overtime            String?   @db.VarChar(20)
+  Status              String?   @db.VarChar(100)
+  MissedPunch         String?   @db.VarChar(50)
+  created_date        DateTime? @default(now(), map: "DF__attendanc__creat__3BB5CE82") @db.DateTime
+  active_flag         Boolean?
+  employee_status     String?   @db.VarChar(50)
+  cost_center         String?   @db.NVarChar(400)
+  cost_code           String?   @db.NVarChar(50)
+}
+
+model attendance_ramadan {
+  id                  Int       @id(map: "PK__attendan__3213E83F5CA2B931") @default(autoincrement())
+  emp_no              String?   @db.VarChar(50)
+  Name                String?   @db.VarChar(200)
+  organization        String?   @db.VarChar(200)
+  parent_organization String?   @db.VarChar(200)
+  department          String?   @db.VarChar(200)
+  employee_type       String?   @db.VarChar(100)
+  WorkDate            DateTime? @db.Date
+  TimeIn              String?   @db.VarChar(20)
+  GeoLocation_In      String?   @db.VarChar(Max)
+  TimeOut             String?   @db.VarChar(20)
+  GeoLocation_Out     String?   @db.VarChar(Max)
+  TotalWorked_Hrs     String?   @db.VarChar(20)
+  Missed_Hrs          String?   @db.VarChar(20)
+  Overtime            String?   @db.VarChar(20)
+  Status              String?   @db.VarChar(100)
+  MissedPunch         String?   @db.VarChar(50)
+  created_date        DateTime? @default(now(), map: "DF__attendanc__creat__10EB6C0E") @db.DateTime
+  active_flag         Boolean?
+  employee_status     String?   @db.VarChar(50)
+  cost_center         String?   @db.NVarChar(400)
+  cost_code           String?   @db.NVarChar(50)
+}
+
+model audit_log {
+  id              String    @id(map: "PK__audit_lo__3213E83F4F061619") @default(dbgenerated("newid()"), map: "DF__audit_log__id__2D47B39A") @db.UniqueIdentifier
+  employee_id     String    @db.VarChar(50)
+  event_type      String    @db.VarChar(100)
+  description     String?   @db.Text
+  http_method     String?   @db.VarChar(10)
+  endpoint        String?   @db.VarChar(255)
+  response_status Int?
+  ip_address      String?   @db.VarChar(45)
+  user_agent      String?   @db.VarChar(500)
+  is_success      Boolean?
+  created_at      DateTime? @default(now(), map: "DF__audit_log__creat__2E3BD7D3") @db.DateTime
+  app_version_no  String?   @db.NVarChar(100)
+}
+
+model chron_db_settings {
+  db_settings_id    Int      @id(map: "PK_chron_db_settings") @default(autoincrement())
+  db_databasetype   String   @db.NVarChar(100)
+  db_databasename   String   @unique(map: "UQ_db_databasename") @db.NVarChar(100)
+  db_host_name      String   @db.NVarChar(100)
+  db_port_no        String   @unique(map: "UQ_db_port_no") @db.NVarChar(100)
+  db_username       String?  @unique(map: "UQ_db_username") @db.NVarChar(100)
+  db_password       String?  @unique(map: "UQ_db_password") @db.NVarChar(100)
+  connect_db_flag   Boolean? @default(false, map: "DF__chron_db___connect")
+  created_id        Int
+  created_date      DateTime @default(now(), map: "DF__chron_db___creat__3B40CD36") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime @default(now(), map: "DF__chron_db___last___3C34F16F") @db.DateTime
+}
+
+model chron_email_settings {
+  em_id               Int      @id(map: "PK__chron_em__ABD24D7F3F9045D2") @default(autoincrement())
+  em_smtp_name        String   @db.NVarChar(100)
+  em_host_name        String   @db.NVarChar(100)
+  em_port_no          String   @unique(map: "UQ_em_port_no") @db.NVarChar(100)
+  em_from_email       String?  @db.NVarChar(100)
+  em_encryption       String?  @db.NVarChar(100)
+  em_active_smtp_flag Boolean? @default(false, map: "DF__chron_ema__em_ac__3D2915A8")
+  created_id          Int
+  created_date        DateTime @default(now(), map: "DF__chron_ema__creat__3E1D39E1") @db.DateTime
+  last_updated_id     Int
+  last_updated_date   DateTime @default(now(), map: "DF__chron_ema__last___3F115E1A") @db.DateTime
+  em_smtp_password    String   @db.NVarChar(256)
+}
+
+model citizenship {
+  citizenship_id    Int      @id(map: "PK__citizens__4AB65D72D968F2E2") @default(autoincrement())
+  citizenship_code  String   @unique(map: "UQ_citizenship_code") @db.NVarChar(200)
+  citizenship_eng   String   @unique(map: "UQ_citizenship_eng") @db.NVarChar(800)
+  citizenship_arb   String   @unique(map: "UQ_citizenship_arb") @db.NVarChar(800)
+  created_id        Int
+  created_date      DateTime @default(now(), map: "DF__citizensh__creat__40058253") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime @default(now(), map: "DF__citizensh__last___40F9A68C") @db.DateTime
+}
+
+model contractor_companies {
+  contract_company_id   Int      @id(map: "PK__contract__9A206CA6ED01327F") @default(autoincrement())
+  contract_company_code String   @unique(map: "UQ__contract__1EBF69EFCF1CAE27") @db.NVarChar(50)
+  contract_company_eng  String   @unique(map: "UQ__contract__ED02C5997F08FAA1") @db.NVarChar(200)
+  contract_company_arb  String   @unique(map: "UQ__contract__F1CA5CB6FE090109") @db.NVarChar(200)
+  created_id            Int
+  created_date          DateTime @default(now(), map: "DF__contracto__creat__41EDCAC5") @db.DateTime
+  last_updated_id       Int
+  last_updated_date     DateTime @default(now(), map: "DF__contracto__last___42E1EEFE") @db.DateTime
+  image                 Bytes?
+}
+
+model cost_code_master {
+  id                      Int       @id(map: "PK__cost_cod__3213E83F37891191") @default(autoincrement())
+  cost_code               String?   @db.NVarChar(50)
+  cost_center             String?   @db.NVarChar(Max)
+  geocoordinates          String?   @db.NVarChar(500)
+  start_time              DateTime? @db.Time
+  end_time                DateTime? @db.Time
+  permit_extra_hours_flag Boolean?  @default(false, map: "DF__cost_code__permi__75985754")
+  extra_hours             Int?      @default(0, map: "DF__cost_code__extra__768C7B8D")
+  created_id              Int?
+  created_date            DateTime? @default(now(), map: "DF__cost_code__creat__77809FC6") @db.DateTime
+  last_updated_id         Int?
+  last_updated_date       DateTime? @db.DateTime
+
+  @@index([cost_code, geocoordinates, start_time, end_time], map: "idx_cost_code_geo_time")
+  @@index([cost_code], map: "idx_cost_code_lookup")
+}
+
+model countries {
+  country_id        Int         @id(map: "PK__countrie__7E8CD055C0785C53") @default(autoincrement())
+  country_code      String      @unique(map: "UQ__country_code") @db.NVarChar(50)
+  country_eng       String      @unique(map: "UQ__country_eng") @db.NVarChar(800)
+  country_arb       String      @unique(map: "UQ_country_arb") @db.NVarChar(800)
+  country_flag_url  String?     @db.NVarChar(500)
+  created_id        Int
+  created_date      DateTime    @default(now(), map: "DF__countries__creat__43D61337") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime    @default(now(), map: "DF__countries__last___44CA3770") @db.DateTime
+  locations         locations[]
+}
+
+model daily_EmpAttendance2 {
+  daily_EmpAttendance_id Int       @id(map: "PK__daily_Em__04AAF32A937ABDF3") @default(autoincrement())
+  Ddate                  DateTime  @db.DateTime
+  employee_id            Int
+  schedule_id            Int?
+  holiday                Int?
+  restday                Int?
+  leave                  Int?
+  isabsent               Int?
+  absentMts              Int?
+  time_In                DateTime? @db.DateTime
+  time_Out               DateTime? @db.DateTime
+  reason_in              String?   @db.VarChar(3)
+  reason_out             String?   @db.VarChar(3)
+  late                   Int?
+  early                  Int?
+  comment                String?   @db.NVarChar(50)
+  remarkseng             String?   @db.NVarChar(200)
+  remarksarb             String?   @db.NVarChar(200)
+  in_permissionid        Int?
+  out_permissionid       Int?
+  permappliedmts         Int?
+  perm_time_used_wp      Int?
+  perm_time_used_wop     Int?
+  workmts_row_timediff   Int?
+  overtime               Int?
+  missedwrkmts           Int?
+  extrawrkmts            Int?
+  monthlymissedmts       Int?
+  monthlyextramts        Int?
+  dailymissedmts         Int?
+  dailyextramts          Int?
+  dailyworkmts           Int?
+  created_id             Int?
+  created_date           DateTime  @default(now(), map: "DF__daily_Emp__creat__7D63964E") @db.DateTime
+  last_updated_id        Int?
+  last_updated_date      DateTime  @default(now(), map: "DF__daily_Emp__last___7E57BA87") @db.DateTime
+}
+
+model daily_EmployeeAttendanceDetails {
+  daily_EmployeeAttendanceDetails_id Int       @id(map: "PK__daily_Em__D56B8ADACD126AC6") @default(autoincrement())
+  Ddate                              DateTime  @db.DateTime
+  employee_id                        Int
+  employee_no                        String    @db.NVarChar(50)
+  organization_id                    Int?
+  grade_id                           Int?
+  designation_id                     Int?
+  country_id                         Int?
+  manager_flag                       Boolean?
+  manager_id                         Int?
+  email                              String?   @db.NVarChar(50)
+  employee_type_id                   Int?
+  location_id                        Int?
+  inpayroll_flag                     Boolean?  @default(false, map: "DF__daily_Emp__inpay__642DD430")
+  join_date                          DateTime? @db.DateTime
+  inactive_date                      DateTime? @db.DateTime
+  schedule_id                        Int?
+  in_time                            DateTime? @db.DateTime
+  out_time                           DateTime? @db.DateTime
+  flexibletime                       Int?
+  gracetime_in                       Int?
+  gracetime_out                      Int?
+  actualschInPerMove                 DateTime? @db.DateTime
+  actualschOutPerMove                DateTime? @db.DateTime
+  actualschOUTCalculated             DateTime? @db.DateTime
+  nightshift                         Int?
+  holiday                            Int?      @default(0, map: "DF__daily_Emp__holid__6521F869")
+  restday                            Int?      @default(0, map: "DF__daily_Emp__restd__66161CA2")
+  leave                              Int?      @default(0, map: "DF__daily_Emp__leave__670A40DB")
+  isabsent                           Int?      @default(0, map: "DF__daily_Emp__isabs__67FE6514")
+  empleaveid                         Int?
+  holidayid                          Int?
+  on_reports_flag                    Boolean?  @default(false, map: "DF__daily_Emp__on_re__68F2894D")
+  absentMts                          Int?
+  time_in                            DateTime? @db.DateTime
+  time_out                           DateTime? @db.DateTime
+  reason_in                          String?   @db.VarChar(3)
+  reason_out                         String?   @db.VarChar(3)
+  reader_in_id                       Int?
+  reader_out_id                      Int?
+  late                               Int?
+  early                              Int?
+  comment                            String?   @db.NVarChar(50)
+  remarks                            String?   @db.NVarChar(100)
+  remarkseng                         String?   @db.NVarChar(200)
+  remarksarb                         String?   @db.NVarChar(200)
+  in_permissionid                    Int?
+  in_perm_from_time                  DateTime? @db.DateTime
+  in_perm_to_time                    DateTime? @db.DateTime
+  out_permissionid                   Int?
+  out_perm_from_time                 DateTime? @db.DateTime
+  out_perm_to_time                   DateTime? @db.DateTime
+  fulldaypermission                  Int?
+  in_offcialperm                     String?   @db.VarChar(1)
+  out_offcialperm                    String?   @db.VarChar(1)
+  permappliedMts                     Int?
+  perm_time_used_wp                  Int?
+  perm_time_used_wop                 Int?
+  open_shift                         String?   @db.VarChar(1)
+  shiftno                            Int?
+  workmts_row_timediff               Int?
+  overtime                           Int?
+  comment_for_update                 String?   @db.VarChar(200)
+  permviolatedmts                    Int?
+  isovertimecounted                  Int?
+  late_worlflow_status               String?   @db.NVarChar(100)
+  early_worlflow_status              String?   @db.NVarChar(100)
+  late_workflow_status               String?   @db.NVarChar(100)
+  early_workflow_status              String?   @db.NVarChar(100)
+  missedwrkmts                       Int?
+  extrawrkmts                        Int?
+  monthlymissedmts                   Int?
+  monthlyextramts                    Int?
+  dailymissedmts                     Int?
+  dailyextramts                      Int?
+  dailyworkmts                       Int?
+  created_id                         Int?
+  created_date                       DateTime  @default(now(), map: "DF__daily_Emp__creat__69E6AD86") @db.DateTime
+  last_updated_id                    Int?
+  last_updated_date                  DateTime  @default(now(), map: "DF__daily_Emp__last___6ADAD1BF") @db.DateTime
+  absent_approved                    Int?
+  absent_approved_id                 Int?
+  absent_approved_name_eng           String?   @db.NVarChar(200)
+  absent_approved_name_arb           String?   @db.NVarChar(200)
+  absent_approved_unit_eng           String?   @db.NVarChar(200)
+  absent_approved_unit_arb           String?   @db.NVarChar(200)
+  absent_approved_date               DateTime? @db.DateTime
+  absent_approved_remarks            String?   @db.NVarChar(500)
+  late_approved                      Int?
+  late_approved_id                   Int?
+  late_approved_name_eng             String?   @db.NVarChar(200)
+  late_approved_name_arb             String?   @db.NVarChar(200)
+  late_approved_unit_eng             String?   @db.NVarChar(200)
+  late_approved_unit_arb             String?   @db.NVarChar(200)
+  late_approved_date                 DateTime? @db.DateTime
+  late_approved_remarks              String?   @db.NVarChar(500)
+  early_approved                     Int?
+  early_approved_id                  Int?
+  early_approved_name_eng            String?   @db.NVarChar(200)
+  early_approved_name_arb            String?   @db.NVarChar(200)
+  early_approved_unit_eng            String?   @db.NVarChar(200)
+  early_approved_unit_arb            String?   @db.NVarChar(200)
+  early_approved_date                DateTime? @db.DateTime
+  early_approved_remarks             String?   @db.NVarChar(500)
+  late_applied_remarks               String?   @db.NVarChar(500)
+  late_applied_date                  DateTime? @db.DateTime
+  late_applied_id                    Int?
+  early_applied_remarks              String?   @db.NVarChar(500)
+  early_applied_date                 DateTime? @db.DateTime
+  early_applied_id                   Int?
+  absent_applied_remarks             String?   @db.NVarChar(500)
+  absent_applied_date                DateTime? @db.DateTime
+  absent_applied_id                  Int?
+
+  @@index([employee_id, Ddate], map: "Indx_DMR_EmpID_Date")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model DailyMove_Test {
+  Emp_Id            Int?
+  ddate             DateTime? @db.Date
+  Time_In           DateTime? @db.DateTime
+  Time_Out          DateTime? @db.DateTime
+  Comment           String?   @db.VarChar(100)
+  MissingInOrOut    Boolean?
+  Absent            Int?
+  created_id        Int?
+  created_date      DateTime? @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model data_reprocess_log {
+  log_id      Decimal   @db.Decimal(18, 0)
+  org_id      Decimal?  @db.Decimal(18, 0)
+  employee_id Decimal?  @db.Decimal(18, 0)
+  from_date   DateTime? @db.DateTime
+  to_date     DateTime? @db.DateTime
+  updateAll   Boolean?
+  status      String?   @db.NVarChar(Max)
+  createdBy   Decimal?  @db.Decimal(18, 0)
+  createdOn   DateTime? @db.DateTime
+  updatedBy   Decimal?  @db.Decimal(18, 0)
+  updatedOn   DateTime? @db.DateTime
+
+  @@ignore
+}
+
+model departments {
+  department_id       Int                @id(map: "PK__departme__C22324227275B4D2") @default(autoincrement())
+  department_code     String             @unique(map: "IX_departments_code") @db.NVarChar(50)
+  department_name_eng String?            @db.NVarChar(255)
+  department_name_arb String?            @db.NVarChar(255)
+  created_id          Int?
+  created_date        DateTime?          @default(now(), map: "DF__departmen__creat__24D2692A") @db.DateTime
+  last_updated_id     Int?
+  last_updated_date   DateTime?          @default(now(), map: "DF__departmen__last___25C68D63") @db.DateTime
+  dept_org_mapping    dept_org_mapping[]
+  employee_master     employee_master[]
+}
+
+model dept_admin_organizations {
+  dept_admin_org_id Int           @id(map: "PK_dept_admin_organizations") @default(autoincrement())
+  dept_admin_id     Int
+  organization_id   Int
+  isDeleted         Boolean       @default(false, map: "DF_dept_admin_organizations_isDeleted")
+  created_id        Int
+  created_date      DateTime      @default(now(), map: "DF_dept_admins_org_created_date") @db.DateTime
+  last_updated_id   Int
+  Last_updated_date DateTime      @default(now(), map: "DF_dept_admins_org__updated_date") @db.DateTime
+  organizations     organizations @relation(fields: [organization_id], references: [organization_id], onUpdate: NoAction, map: "FK_dept_admins_emp_orgs")
+  dept_admins       dept_admins   @relation(fields: [dept_admin_id], references: [dept_admin_id], onUpdate: NoAction, map: "FK_dept_admins_org")
+}
+
+model dept_admins {
+  dept_admin_id            Int                        @id(map: "PK__dept_adm__E654A16EA7789CF7") @default(autoincrement())
+  employee_id              Int
+  from_date                DateTime                   @db.DateTime
+  to_date                  DateTime                   @db.DateTime
+  delegation_level         Int                        @default(0, map: "DF_dept_admins_delegation_level")
+  active_status            Boolean                    @default(true, map: "DF_dept_admins_status")
+  isDeleted                Boolean                    @default(false, map: "DF_dept_admins_isDeleted")
+  remarks                  String?                    @db.NVarChar(800)
+  created_id               Int
+  created_date             DateTime                   @default(now(), map: "DF_dept_admins_created_date") @db.DateTime
+  last_updated_id          Int
+  last_updated_date        DateTime                   @default(now(), map: "DF_dept_admins_updated_date") @db.DateTime
+  dept_admin_organizations dept_admin_organizations[]
+  employee_master          employee_master            @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_dept_admins_employee_master")
+}
+
+model dept_org_mapping {
+  mapping_id        Int            @id(map: "PK__dept_org__5AE90045ACDABBF1") @default(autoincrement())
+  organization_id   Int?
+  department_id     Int?
+  company_code      String?        @db.NVarChar(100)
+  department_code   String?        @db.NVarChar(50)
+  is_active         Boolean?       @default(true, map: "DF__dept_org___is_ac__2B7F66B9")
+  created_id        Int?
+  created_date      DateTime?      @default(now(), map: "DF__dept_org___creat__29971E47") @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime?      @default(now(), map: "DF__dept_org___last___2A8B4280") @db.DateTime
+  departments       departments?   @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dept_org_mapping_departments")
+  organizations     organizations? @relation(fields: [organization_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dept_org_mapping_organizations")
+}
+
+model designations {
+  designation_id    Int      @id(map: "PK__designat__177649C13B2EF5AF") @default(autoincrement())
+  designation_code  String   @unique(map: "UQ_designation_code") @db.NVarChar(200)
+  designation_arb   String   @db.NVarChar(200)
+  designation_eng   String   @db.NVarChar(200)
+  vacancy           Int?     @default(0, map: "DF__designati__vacan__56E8E7AB")
+  remarks           String?  @db.NVarChar(255)
+  created_id        Int
+  created_date      DateTime @default(now(), map: "DF__designati__creat__57DD0BE4") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime @default(now(), map: "DF__designati__last___58D1301D") @db.DateTime
+}
+
+model devices {
+  device_id         Int       @id(map: "PK__devices__3B085D8B16D6C8ED") @default(autoincrement())
+  device_no         String?   @db.NVarChar(50)
+  device_name       String?   @db.NVarChar(50)
+  device_status     Boolean?
+  delete_flag       Boolean?
+  created_id        Int?
+  created_date      DateTime? @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime? @db.DateTime
+}
+
+model emp_missing_movements {
+  emp_missing_Movements_Id     Int                            @id(map: "PK__emp_miss__F5ADC697F7F65A56") @default(autoincrement())
+  Employee_Id                  Int?
+  TransDate                    DateTime?                      @db.DateTime
+  trans_IN_id                  Int?
+  Trans_IN                     DateTime?                      @db.DateTime
+  Reason_IN                    String?                        @db.NVarChar(10)
+  Status_IN                    String?                        @db.NVarChar(20)
+  trans_OUT_id                 Int?
+  Trans_OUT                    DateTime?                      @db.DateTime
+  Reason_OUT                   String?                        @db.NVarChar(10)
+  Status_OUT                   String?                        @db.NVarChar(20)
+  Attendance_Status            String?                        @db.VarChar(50)
+  employee_master              employee_master?               @relation(fields: [Employee_Id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "EmpMissing_EmployeeMaster")
+  employee_manual_transactions employee_manual_transactions[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Employee_Attendance_Summary {
+  EmployeeNumber    String    @db.NVarChar(50)
+  CompanyCode       String?   @db.NVarChar(200)
+  EmployeeType      String?   @db.NVarChar(10)
+  CostCenter        String?   @db.NVarChar(50)
+  DateIn            DateTime? @db.Date
+  FirstIn           DateTime? @db.DateTime
+  DateOut           DateTime? @db.Date
+  LastOut           DateTime? @db.DateTime
+  TotalHours        Decimal?  @db.Decimal(10, 2)
+  created_id        Int?
+  created_date      DateTime? @default(now(), map: "DF__Employee___creat__6FBF826D") @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime? @default(now(), map: "DF__Employee___last___70B3A6A6") @db.DateTime
+
+  @@ignore
+}
+
+model employee_event_transactions {
+  transaction_id    Int             @id(map: "PK__employee__85C600AFA81B72E5") @default(autoincrement())
+  employee_id       Int
+  transaction_time  DateTime        @db.DateTime
+  reason            String          @db.NVarChar(10)
+  remarks           String?         @db.NVarChar(255)
+  device_id         Int?
+  user_entry_flag   Boolean         @default(false, map: "DF__employee___user___59C55456")
+  created_id        Int
+  created_date      DateTime        @default(now(), map: "DF__employee___creat__5AB9788F") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime        @default(now(), map: "DF__employee___last___5BAD9CC8") @db.DateTime
+  transaction_type  String          @default("IN", map: "DF__employee___trans__5CA1C101") @db.VarChar(10)
+  geolocation       String?         @db.NVarChar(500)
+  app_version_no    String?         @db.NVarChar(100)
+  employee_master   employee_master @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_employee_event_trans_employees")
+
+  @@index([employee_id, transaction_time], map: "EmpTrans_EmpIDTransTime")
+}
+
+model employee_group_members {
+  group_member_id     Int             @id(map: "PK__employee__F3C66B8C5CE4924D") @default(autoincrement())
+  employee_group_id   Int
+  employee_id         Int
+  effective_from_date DateTime        @db.DateTime
+  effective_to_date   DateTime?       @db.DateTime
+  active_flag         Boolean         @default(false, map: "DF__employee___activ__5D95E53A")
+  created_id          Int
+  created_date        DateTime        @default(now(), map: "DF__employee___creat__5E8A0973") @db.DateTime
+  last_updated_id     Int
+  last_updated_date   DateTime        @default(now(), map: "DF__employee___last___5F7E2DAC") @db.DateTime
+  employee_groups     employee_groups @relation(fields: [employee_group_id], references: [employee_group_id], onUpdate: NoAction, map: "FK_employee_group_members_employee_groups")
+  employee_master     employee_master @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_employee_group_members_employees")
+}
+
+model employee_groups {
+  employee_group_id      Int                      @id(map: "PK__employee__4D6A4BBBDB632771") @default(autoincrement())
+  group_code             String                   @unique(map: "UQ_emp_group_code") @db.NVarChar(50)
+  group_name_eng         String?                  @db.NVarChar(200)
+  group_name_arb         String?                  @db.NVarChar(200)
+  schedule_flag          Boolean?                 @default(false, map: "DF__employee___sched__246854D6")
+  reporting_group_flag   Boolean?                 @default(false, map: "DF__employee___repor__255C790F")
+  reporting_person_id    Int?
+  group_start_date       DateTime?                @db.DateTime
+  group_end_date         DateTime?                @db.DateTime
+  created_id             Int
+  created_date           DateTime                 @default(now(), map: "DF__employee___creat__2744C181") @db.DateTime
+  last_updated_id        Int
+  last_updated_date      DateTime                 @default(now(), map: "DF__employee___last___2838E5BA") @db.DateTime
+  employee_group_members employee_group_members[]
+  employee_master        employee_master?         @relation(fields: [reporting_person_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_group_reporting_employees")
+  group_schedules        group_schedules[]
+}
+
+model employee_leaves {
+  employee_leave_id                                            Int              @id(map: "PK__employee__7D97C835E1414966") @default(autoincrement())
+  leave_type_id                                                Int
+  employee_id                                                  Int
+  from_date                                                    DateTime         @db.DateTime
+  to_date                                                      DateTime         @db.DateTime
+  number_of_leaves                                             Int?
+  employee_remarks                                             String?          @db.NVarChar(Max)
+  approve_reject_flag                                          Int?             @default(0, map: "DF_employee_leaves_approve_reject_flag")
+  approver_id                                                  Int?
+  approver_remarks                                             String?          @db.NVarChar(Max)
+  approved_date                                                DateTime?        @db.DateTime
+  leave_status                                                 String?          @db.NVarChar(500)
+  alternate_employee_id                                        Int?
+  handovers_to_alternate_employee                              String?          @db.NVarChar(Max)
+  leave_doc_filename_path                                      String?          @db.NVarChar(800)
+  leave_unique_ref_no                                          String?          @db.NVarChar(500)
+  carryforward_flag                                            Boolean?
+  created_id                                                   Int
+  created_date                                                 DateTime         @default(now(), map: "DF__employee___creat__65370702") @db.DateTime
+  last_updated_id                                              Int
+  last_updated_date                                            DateTime         @default(now(), map: "DF__employee___last___662B2B3B") @db.DateTime
+  leave_reference_id                                           String?          @db.NVarChar(50)
+  employee_master_employee_leaves_approver_idToemployee_master employee_master? @relation("employee_leaves_approver_idToemployee_master", fields: [approver_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_leaves_apprvr")
+  employee_master_employee_leaves_employee_idToemployee_master employee_master  @relation("employee_leaves_employee_idToemployee_master", fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_employee_leaves_employees")
+  leave_types                                                  leave_types      @relation(fields: [leave_type_id], references: [leave_type_id], onUpdate: NoAction, map: "FK_employee_leaves_leaves")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model employee_leaves_backup_20260505 {
+  employee_leave_id               Int       @default(autoincrement())
+  leave_type_id                   Int
+  employee_id                     Int
+  from_date                       DateTime  @db.DateTime
+  to_date                         DateTime  @db.DateTime
+  number_of_leaves                Int?
+  employee_remarks                String?   @db.NVarChar(Max)
+  approve_reject_flag             Int?
+  approver_id                     Int?
+  approver_remarks                String?   @db.NVarChar(Max)
+  approved_date                   DateTime? @db.DateTime
+  leave_status                    String?   @db.NVarChar(500)
+  alternate_employee_id           Int?
+  handovers_to_alternate_employee String?   @db.NVarChar(Max)
+  leave_doc_filename_path         String?   @db.NVarChar(800)
+  leave_unique_ref_no             String?   @db.NVarChar(500)
+  carryforward_flag               Boolean?
+  created_id                      Int
+  created_date                    DateTime  @db.DateTime
+  last_updated_id                 Int
+  last_updated_date               DateTime  @db.DateTime
+  leave_reference_id              String?   @db.NVarChar(50)
+
+  @@ignore
+}
+
+model employee_manual_transactions {
+  employee_manual_transaction_id Int                    @id(map: "PK__employee__A60D116B6EDED6F8") @default(autoincrement())
+  employee_id                    Int
+  transaction_time               DateTime               @db.DateTime
+  emp_missing_movement_id        Int?
+  reason                         String                 @db.NVarChar(3)
+  remarks                        String                 @db.NVarChar(2000)
+  transaction_status             String                 @db.NVarChar(20)
+  device_id                      Int?
+  created_id                     Int?
+  created_date                   DateTime?              @default(now(), map: "DF__employee___creat__0CC5D56F") @db.DateTime
+  last_updated_id                Int?
+  last_updated_date              DateTime?              @default(now(), map: "DF__employee___last___0DB9F9A8") @db.DateTime
+  attachment_path                String?                @db.NVarChar(Max)
+  emp_missing_movements          emp_missing_movements? @relation(fields: [emp_missing_movement_id], references: [emp_missing_Movements_Id], onDelete: NoAction, onUpdate: NoAction, map: "FK__employee___emp_m__0BD1B136")
+}
+
+model employee_master {
+  employee_id                                                                        Int                           @id(map: "PK__employee__C52E0BA8B382ACB5") @default(autoincrement())
+  emp_no                                                                             String                        @unique(map: "UQ_emp_no") @db.NVarChar(50)
+  firstname_eng                                                                      String                        @db.NVarChar(800)
+  lastname_eng                                                                       String                        @db.NVarChar(800)
+  firstname_arb                                                                      String                        @db.NVarChar(800)
+  lastname_arb                                                                       String                        @db.NVarChar(800)
+  card_number                                                                        String?                       @db.NVarChar(100)
+  pin                                                                                String?                       @db.NVarChar(100)
+  organization_id                                                                    Int?
+  grade_id                                                                           Int?
+  designation_id                                                                     Int?
+  citizenship_id                                                                     Int?
+  employee_type_id                                                                   Int?
+  join_date                                                                          DateTime?                     @db.DateTime
+  active_date                                                                        DateTime?                     @db.DateTime
+  inactive_date                                                                      DateTime?                     @db.DateTime
+  national_id                                                                        String?                       @db.NVarChar(100)
+  national_id_expiry_date                                                            DateTime?                     @db.Date
+  passport_number                                                                    String?                       @db.NVarChar(100)
+  passport_expiry_date                                                               DateTime?                     @db.Date
+  passport_issue_country_id                                                          Int?
+  mobile                                                                             String?                       @db.VarChar(100)
+  email                                                                              String?                       @db.NVarChar(100)
+  active_flag                                                                        Boolean?                      @default(false, map: "DF__employee___activ__4B2D1C3C")
+  gender                                                                             String?                       @db.NVarChar(10)
+  local_flag                                                                         Boolean?                      @default(false, map: "DF__employee___local__4C214075")
+  punch_flag                                                                         Boolean?                      @default(false, map: "DF__employee___punch__4D1564AE")
+  on_reports_flag                                                                    Boolean?                      @default(false, map: "DF__employee___on_re__4E0988E7")
+  email_notifications_flag                                                           Boolean?
+  include_email_flag                                                                 Boolean?                      @default(false, map: "DF__employee___inclu__4EFDAD20")
+  open_shift_flag                                                                    Boolean?                      @default(false, map: "DF__employee___open___4FF1D159")
+  overtime_flag                                                                      Boolean?                      @default(false, map: "DF__employee___overt__50E5F592")
+  web_punch_flag                                                                     Boolean?                      @default(false, map: "DF__employee___web_p__51DA19CB")
+  shift_flag                                                                         Boolean?                      @default(false, map: "DF__employee___shift__52CE3E04")
+  check_inout_selfie_flag                                                            Boolean?                      @default(false, map: "DF__employee___check__53C2623D")
+  calculate_monthly_missed_hrs_flag                                                  Boolean?                      @default(false, map: "DF__employee___calcu__54B68676")
+  exclude_from_integration_flag                                                      Boolean?                      @default(false, map: "DF__employee___exclu__55AAAAAF")
+  photo_file_name                                                                    String?                       @db.NVarChar(500)
+  manager_flag                                                                       Boolean?                      @default(false, map: "DF__employee___manag__569ECEE8")
+  manager_id                                                                         Int?
+  inpayroll_flag                                                                     Boolean?                      @default(false, map: "DF__employee___inpay__5887175A")
+  share_roster_flag                                                                  Boolean?                      @default(false, map: "DF__employee___share__597B3B93")
+  location_id                                                                        Int?
+  contract_company_id                                                                Int?
+  remarks                                                                            String?                       @db.NVarChar(900)
+  geofence_flag                                                                      Boolean?                      @default(false, map: "DF__employee___geofe__5C57A83E")
+  created_id                                                                         Int
+  created_date                                                                       DateTime                      @default(now(), map: "DF__employee___creat__5D4BCC77") @db.DateTime
+  last_updated_id                                                                    Int
+  last_updated_date                                                                  DateTime                      @default(now(), map: "DF__employee___last___5E3FF0B0") @db.DateTime
+  SAP_user_flag                                                                      Boolean?
+  local_user_flag                                                                    Boolean?
+  department_id                                                                      Int?
+  employee_status                                                                    String?                       @db.VarChar(50)
+  cost_center                                                                        String?                       @db.NVarChar(400)
+  cost_code                                                                          String?                       @db.NVarChar(50)
+  personal_email                                                                     String?                       @db.NVarChar(Max)
+  dept_admins                                                                        dept_admins[]
+  emp_missing_movements                                                              emp_missing_movements[]
+  employee_event_transactions                                                        employee_event_transactions[]
+  employee_group_members                                                             employee_group_members[]
+  employee_groups                                                                    employee_groups[]
+  employee_leaves_employee_leaves_approver_idToemployee_master                       employee_leaves[]             @relation("employee_leaves_approver_idToemployee_master")
+  employee_leaves_employee_leaves_employee_idToemployee_master                       employee_leaves[]             @relation("employee_leaves_employee_idToemployee_master")
+  departments                                                                        departments?                  @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_master_departments")
+  employee_type                                                                      employee_type?                @relation(fields: [employee_type_id], references: [employee_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_master_employee_type")
+  employee_master                                                                    employee_master?              @relation("employee_masterToemployee_master", fields: [manager_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employees_mgr")
+  other_employee_master                                                              employee_master[]             @relation("employee_masterToemployee_master")
+  employee_monthly_roster                                                            employee_monthly_roster[]
+  employee_schedules                                                                 employee_schedules[]
+  employee_short_permissions_employee_short_permissions_approver_idToemployee_master employee_short_permissions[]  @relation("employee_short_permissions_approver_idToemployee_master")
+  employee_short_permissions_employee_short_permissions_employee_idToemployee_master employee_short_permissions[]  @relation("employee_short_permissions_employee_idToemployee_master")
+  sec_users                                                                          sec_users?
+  user_tokens                                                                        user_tokens[]
+
+  @@index([department_id], map: "IX_employee_master_department_id")
+}
+
+model Employee_MissedTime {
+  Employee_MissedTime_Id Int       @id(map: "PK__Employee__48559C9BBF177990") @default(autoincrement())
+  Organization_id        Int?
+  Organization_Code      String?   @db.NVarChar(255)
+  Employee_id            Int?
+  Employee_code          String?   @db.NVarChar(50)
+  Name_Eng               String?   @db.NVarChar(500)
+  PDate                  DateTime? @db.DateTime
+  perm_out_time          DateTime? @db.DateTime
+  perm_in_time           DateTime? @db.DateTime
+  PermApproved           Int?      @default(0, map: "DF_PermApprved_MissedTime")
+  PermTimeTaken          Int?
+  PermRemarks            String?   @db.NVarChar(Max)
+  PermTypeId             Int?
+  Justify_Flag           Int?
+  Justified_Date         DateTime? @db.DateTime
+  Single_Permissions_Id  Int?
+  Missed_Reason          String?   @db.NVarChar(50)
+  created_id             Int?
+  created_date           DateTime? @db.DateTime
+  last_updated_id        Int?
+  last_updated_date      DateTime? @db.DateTime
+}
+
+model Employee_MissedTime_Details {
+  Employee_MissedTimeDetails_Id Int       @id(map: "PK__Employee__3DBA7EB7C6EBCF7A") @default(autoincrement())
+  Employee_id                   Int?
+  PDate                         DateTime? @db.DateTime
+  perm_out_time                 DateTime? @db.DateTime
+  perm_in_time                  DateTime? @db.DateTime
+  PermTimeTaken                 Int?
+  PermRemarks                   String?   @db.NVarChar(Max)
+  PermTypeId                    Decimal?  @db.Decimal(18, 0)
+  Justify_Flag                  Int?
+  Justified_Date                DateTime? @db.DateTime
+  Single_Permissions_Id         Int?
+  Missed_Reason                 String?   @db.NVarChar(50)
+  created_id                    Int?
+  created_date                  DateTime? @db.DateTime
+  last_updated_id               Int?
+  last_updated_date             DateTime? @db.DateTime
+}
+
+model employee_monthly_roster {
+  schedule_roster_id                               Int             @id(map: "PK__employee__7AC10A048AB9AC76") @default(autoincrement())
+  employee_id                                      Int
+  from_date                                        DateTime        @db.DateTime
+  to_date                                          DateTime        @db.DateTime
+  version_no                                       Int             @default(1, map: "DF__employee___versi__793DFFAF")
+  D1                                               Int?
+  D2                                               Int?
+  D3                                               Int?
+  D4                                               Int?
+  D5                                               Int?
+  D6                                               Int?
+  D7                                               Int?
+  D8                                               Int?
+  D9                                               Int?
+  D10                                              Int?
+  D11                                              Int?
+  D12                                              Int?
+  D13                                              Int?
+  D14                                              Int?
+  D15                                              Int?
+  D16                                              Int?
+  D17                                              Int?
+  D18                                              Int?
+  D19                                              Int?
+  D20                                              Int?
+  D21                                              Int?
+  D22                                              Int?
+  D23                                              Int?
+  D24                                              Int?
+  D25                                              Int?
+  D26                                              Int?
+  D27                                              Int?
+  D28                                              Int?
+  D29                                              Int?
+  D30                                              Int?
+  D31                                              Int?
+  created_id                                       Int
+  created_date                                     DateTime        @default(now(), map: "DF__employee___creat__7A3223E8") @db.DateTime
+  last_updated_id                                  Int
+  last_updated_date                                DateTime        @default(now(), map: "DF__employee___last___7B264821") @db.DateTime
+  manager_id                                       Int?
+  finalize_flag                                    Boolean
+  schedules_employee_monthly_roster_D1Toschedules  schedules?      @relation("employee_monthly_roster_D1Toschedules", fields: [D1], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D1_ROSTER")
+  schedules_employee_monthly_roster_D10Toschedules schedules?      @relation("employee_monthly_roster_D10Toschedules", fields: [D10], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D10_ROSTER")
+  schedules_employee_monthly_roster_D11Toschedules schedules?      @relation("employee_monthly_roster_D11Toschedules", fields: [D11], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D11_ROSTER")
+  schedules_employee_monthly_roster_D12Toschedules schedules?      @relation("employee_monthly_roster_D12Toschedules", fields: [D12], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D12_ROSTER")
+  schedules_employee_monthly_roster_D13Toschedules schedules?      @relation("employee_monthly_roster_D13Toschedules", fields: [D13], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D13_ROSTER")
+  schedules_employee_monthly_roster_D14Toschedules schedules?      @relation("employee_monthly_roster_D14Toschedules", fields: [D14], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D14_ROSTER")
+  schedules_employee_monthly_roster_D15Toschedules schedules?      @relation("employee_monthly_roster_D15Toschedules", fields: [D15], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D15_ROSTER")
+  schedules_employee_monthly_roster_D16Toschedules schedules?      @relation("employee_monthly_roster_D16Toschedules", fields: [D16], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D16_ROSTER")
+  schedules_employee_monthly_roster_D17Toschedules schedules?      @relation("employee_monthly_roster_D17Toschedules", fields: [D17], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D17_ROSTER")
+  schedules_employee_monthly_roster_D18Toschedules schedules?      @relation("employee_monthly_roster_D18Toschedules", fields: [D18], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D18_ROSTER")
+  schedules_employee_monthly_roster_D19Toschedules schedules?      @relation("employee_monthly_roster_D19Toschedules", fields: [D19], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D19_ROSTER")
+  schedules_employee_monthly_roster_D2Toschedules  schedules?      @relation("employee_monthly_roster_D2Toschedules", fields: [D2], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D2_ROSTER")
+  schedules_employee_monthly_roster_D20Toschedules schedules?      @relation("employee_monthly_roster_D20Toschedules", fields: [D20], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D20_ROSTER")
+  schedules_employee_monthly_roster_D21Toschedules schedules?      @relation("employee_monthly_roster_D21Toschedules", fields: [D21], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D21_ROSTER")
+  schedules_employee_monthly_roster_D22Toschedules schedules?      @relation("employee_monthly_roster_D22Toschedules", fields: [D22], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D22_ROSTER")
+  schedules_employee_monthly_roster_D23Toschedules schedules?      @relation("employee_monthly_roster_D23Toschedules", fields: [D23], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D23_ROSTER")
+  schedules_employee_monthly_roster_D24Toschedules schedules?      @relation("employee_monthly_roster_D24Toschedules", fields: [D24], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D24_ROSTER")
+  schedules_employee_monthly_roster_D25Toschedules schedules?      @relation("employee_monthly_roster_D25Toschedules", fields: [D25], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D25_ROSTER")
+  schedules_employee_monthly_roster_D26Toschedules schedules?      @relation("employee_monthly_roster_D26Toschedules", fields: [D26], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D26_ROSTER")
+  schedules_employee_monthly_roster_D27Toschedules schedules?      @relation("employee_monthly_roster_D27Toschedules", fields: [D27], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D27_ROSTER")
+  schedules_employee_monthly_roster_D28Toschedules schedules?      @relation("employee_monthly_roster_D28Toschedules", fields: [D28], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D28_ROSTER")
+  schedules_employee_monthly_roster_D29Toschedules schedules?      @relation("employee_monthly_roster_D29Toschedules", fields: [D29], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D29_ROSTER")
+  schedules_employee_monthly_roster_D3Toschedules  schedules?      @relation("employee_monthly_roster_D3Toschedules", fields: [D3], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D3_ROSTER")
+  schedules_employee_monthly_roster_D30Toschedules schedules?      @relation("employee_monthly_roster_D30Toschedules", fields: [D30], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D30_ROSTER")
+  schedules_employee_monthly_roster_D31Toschedules schedules?      @relation("employee_monthly_roster_D31Toschedules", fields: [D31], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D31_ROSTER")
+  schedules_employee_monthly_roster_D4Toschedules  schedules?      @relation("employee_monthly_roster_D4Toschedules", fields: [D4], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D4_ROSTER")
+  schedules_employee_monthly_roster_D5Toschedules  schedules?      @relation("employee_monthly_roster_D5Toschedules", fields: [D5], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D5_ROSTER")
+  schedules_employee_monthly_roster_D6Toschedules  schedules?      @relation("employee_monthly_roster_D6Toschedules", fields: [D6], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D6_ROSTER")
+  schedules_employee_monthly_roster_D7Toschedules  schedules?      @relation("employee_monthly_roster_D7Toschedules", fields: [D7], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D7_ROSTER")
+  schedules_employee_monthly_roster_D8Toschedules  schedules?      @relation("employee_monthly_roster_D8Toschedules", fields: [D8], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D8_ROSTER")
+  schedules_employee_monthly_roster_D9Toschedules  schedules?      @relation("employee_monthly_roster_D9Toschedules", fields: [D9], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_D9_ROSTER")
+  employee_master                                  employee_master @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_employee_monthly_roster_employee")
+}
+
+model employee_schedules {
+  employee_schedule_id                                          Int             @id(map: "PK__employee__5F4390AB7ED9D1A8") @default(autoincrement())
+  employee_id                                                   Int
+  from_date                                                     DateTime        @db.DateTime
+  to_date                                                       DateTime        @db.DateTime
+  monday_schedule_id                                            Int?
+  tuesday_schedule_id                                           Int?
+  wednesday_schedule_id                                         Int?
+  thursday_schedule_id                                          Int?
+  friday_schedule_id                                            Int?
+  saturday_schedule_id                                          Int?
+  sunday_schedule_id                                            Int?
+  created_id                                                    Int
+  created_date                                                  DateTime        @default(now(), map: "DF__employee___creat__7C1A6C5A") @db.DateTime
+  last_updated_id                                               Int
+  last_updated_date                                             DateTime        @default(now(), map: "DF__employee___last___7D0E9093") @db.DateTime
+  employee_master                                               employee_master @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_employee_schedules_employees")
+  schedules_employee_schedules_monday_schedule_idToschedules    schedules?      @relation("employee_schedules_monday_schedule_idToschedules", fields: [monday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules")
+  schedules_employee_schedules_tuesday_schedule_idToschedules   schedules?      @relation("employee_schedules_tuesday_schedule_idToschedules", fields: [tuesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules1")
+  schedules_employee_schedules_wednesday_schedule_idToschedules schedules?      @relation("employee_schedules_wednesday_schedule_idToschedules", fields: [wednesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules2")
+  schedules_employee_schedules_thursday_schedule_idToschedules  schedules?      @relation("employee_schedules_thursday_schedule_idToschedules", fields: [thursday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules3")
+  schedules_employee_schedules_friday_schedule_idToschedules    schedules?      @relation("employee_schedules_friday_schedule_idToschedules", fields: [friday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules4")
+  schedules_employee_schedules_saturday_schedule_idToschedules  schedules?      @relation("employee_schedules_saturday_schedule_idToschedules", fields: [saturday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules5")
+  schedules_employee_schedules_sunday_schedule_idToschedules    schedules?      @relation("employee_schedules_sunday_schedule_idToschedules", fields: [sunday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_schedules_schedules6")
+}
+
+model employee_short_permissions {
+  short_permission_id                                                     Int              @id(map: "PK__employee__190470C0B009287A") @default(autoincrement())
+  permission_type_id                                                      Int
+  employee_id                                                             Int
+  from_date                                                               DateTime         @db.DateTime
+  to_date                                                                 DateTime         @db.DateTime
+  from_time                                                               DateTime?        @db.Time
+  to_time                                                                 DateTime?        @db.Time
+  perm_minutes                                                            Int?
+  remarks                                                                 String           @db.NVarChar(Max)
+  approver_remarks                                                        String?          @db.NVarChar(Max)
+  approve_reject_flag                                                     Int              @default(0, map: "DF__employee___appro__7ADC2F5E")
+  approver_id                                                             Int?
+  approved_date                                                           DateTime?        @db.DateTime
+  created_id                                                              Int
+  created_date                                                            DateTime         @default(now(), map: "DF__employee___creat__7CC477D0") @db.DateTime
+  last_updated_id                                                         Int
+  last_updated_date                                                       DateTime         @default(now(), map: "DF__employee___last___7DB89C09") @db.DateTime
+  official_perm_flag                                                      Boolean?         @default(false, map: "DF__employee___offic__4EFDAD20")
+  leave_reference_id                                                      Int?
+  employee_master_employee_short_permissions_approver_idToemployee_master employee_master? @relation("employee_short_permissions_approver_idToemployee_master", fields: [approver_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_employee_perm_apprvr")
+  employee_master_employee_short_permissions_employee_idToemployee_master employee_master  @relation("employee_short_permissions_employee_idToemployee_master", fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_single_permissions_employees")
+  permission_types                                                        permission_types @relation(fields: [permission_type_id], references: [permission_type_id], onUpdate: NoAction, map: "FK_single_permissions_permission_types")
+}
+
+model employee_transactions_local {
+  transaction_id         BigInt    @id(map: "PK_employee_transactions_local")
+  employee_id            BigInt?
+  emp_no                 String?   @db.NVarChar(50)
+  encounter_date         DateTime? @db.Date
+  encounter_time         String?   @db.VarChar(8)
+  transaction_time_dubai DateTime? @db.DateTime
+  transaction_time       DateTime? @db.DateTime
+  reason                 String?   @db.NVarChar(100)
+  remarks                String?   @db.NVarChar(255)
+  device_id              String?   @db.NVarChar(100)
+  user_entry_flag        Boolean?
+  created_id             BigInt?
+  created_date           DateTime? @db.DateTime
+  last_updated_id        BigInt?
+  last_updated_date      DateTime? @db.DateTime
+  transaction_type       String?   @db.NVarChar(50)
+  geolocation            String?   @db.NVarChar(255)
+}
+
+model employee_type {
+  employee_type_id   Int               @id(map: "PK__employee__A36C7A1CD245546F") @default(autoincrement())
+  employee_type_code String            @unique(map: "UQ__employee__0AC0345C20C630B8") @db.NVarChar(50)
+  employee_type_eng  String            @unique(map: "UQ__employee__5669BD5560E185F8") @db.NVarChar(100)
+  employee_type_arb  String            @unique(map: "UQ__employee__5B664DD193B5F097") @db.NVarChar(100)
+  created_id         Int
+  created_date       DateTime?         @default(now(), map: "DF__employee___creat__00DF2177") @db.DateTime
+  last_updated_id    Int
+  last_updated_date  DateTime          @default(now(), map: "DF__employee___last___01D345B0") @db.DateTime
+  employee_master    employee_master[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model full_personal_email {
+  Employee_ID    String? @db.NVarChar(Max)
+  SAP_ID         String? @db.NVarChar(Max)
+  Personal_Email String? @db.NVarChar(Max)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model fullsparkuserclient {
+  SAP_ID        String? @db.NVarChar(Max)
+  Employee_Name String? @db.NVarChar(Max)
+
+  @@ignore
+}
+
+model grades {
+  grade_id               Int      @id(map: "PK__grades__3A8F732C90D096D2") @default(autoincrement())
+  grade_code             String   @unique(map: "UQ_grade_code") @db.NVarChar(200)
+  grade_eng              String   @db.NVarChar(200)
+  grade_arb              String   @db.NVarChar(200)
+  number_of_CL           Int      @default(0, map: "DF__grades__number_o__02C769E9")
+  number_of_SL           Int      @default(0, map: "DF__grades__number_o__03BB8E22")
+  number_of_AL           Int      @default(0, map: "DF__grades__number_o__04AFB25B")
+  overtime_eligible_flag Boolean? @default(false, map: "DF__grades__overtime__05A3D694")
+  senior_flag            Boolean  @default(false, map: "DF__grades__senior_f__0697FACD")
+  created_id             Int
+  created_date           DateTime @default(now(), map: "DF__grades__created___078C1F06") @db.DateTime
+  last_updated_id        Int
+  last_updated_date      DateTime @default(now(), map: "DF__grades__last_upd__0880433F") @db.DateTime
+}
+
+model group_schedules {
+  group_schedule_id                                          Int             @id(map: "PK__group_sc__08BEE243C0A6023B") @default(autoincrement())
+  employee_group_id                                          Int
+  from_date                                                  DateTime        @db.DateTime
+  to_date                                                    DateTime        @db.DateTime
+  monday_schedule_id                                         Int?
+  tuesday_schedule_id                                        Int?
+  wednesday_schedule_id                                      Int?
+  thursday_schedule_id                                       Int?
+  friday_schedule_id                                         Int?
+  saturday_schedule_id                                       Int?
+  sunday_schedule_id                                         Int?
+  created_id                                                 Int
+  created_date                                               DateTime        @default(now(), map: "DF__group_sch__creat__09746778") @db.DateTime
+  last_updated_id                                            Int
+  last_updated_date                                          DateTime        @default(now(), map: "DF__group_sch__last___0A688BB1") @db.DateTime
+  employee_groups                                            employee_groups @relation(fields: [employee_group_id], references: [employee_group_id], onUpdate: NoAction, map: "FK_group_schedules_employee_groups")
+  schedules_group_schedules_monday_schedule_idToschedules    schedules?      @relation("group_schedules_monday_schedule_idToschedules", fields: [monday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules")
+  schedules_group_schedules_tuesday_schedule_idToschedules   schedules?      @relation("group_schedules_tuesday_schedule_idToschedules", fields: [tuesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules1")
+  schedules_group_schedules_wednesday_schedule_idToschedules schedules?      @relation("group_schedules_wednesday_schedule_idToschedules", fields: [wednesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules2")
+  schedules_group_schedules_thursday_schedule_idToschedules  schedules?      @relation("group_schedules_thursday_schedule_idToschedules", fields: [thursday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules3")
+  schedules_group_schedules_friday_schedule_idToschedules    schedules?      @relation("group_schedules_friday_schedule_idToschedules", fields: [friday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules4")
+  schedules_group_schedules_saturday_schedule_idToschedules  schedules?      @relation("group_schedules_saturday_schedule_idToschedules", fields: [saturday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules5")
+  schedules_group_schedules_sunday_schedule_idToschedules    schedules?      @relation("group_schedules_sunday_schedule_idToschedules", fields: [sunday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_group_schedules_schedules6")
+}
+
+model holidays {
+  holiday_id          Int      @id(map: "PK__holidays__253884EAE9193881") @default(autoincrement())
+  holiday_eng         String   @db.NVarChar(200)
+  holiday_arb         String   @db.NVarChar(200)
+  remarks             String?  @db.NVarChar(255)
+  from_date           DateTime @db.DateTime
+  to_date             DateTime @db.DateTime
+  recurring_flag      Boolean? @default(false, map: "DF__holidays__recurr__0B5CAFEA")
+  public_holiday_flag Boolean? @default(false, map: "DF__holidays__public__0C50D423")
+  created_id          Int
+  created_date        DateTime @default(now(), map: "DF__holidays__create__0D44F85C") @db.DateTime
+  last_updated_id     Int
+  last_updated_date   DateTime @default(now(), map: "DF__holidays__last_u__0E391C95") @db.DateTime
+}
+
+model leave_types {
+  leave_type_id                Int               @id(map: "PK__leave_ty__727714D40561101D") @default(autoincrement())
+  leave_type_code              String            @unique(map: "UQ_leave_type_code") @db.NVarChar(50)
+  leave_type_eng               String?           @db.NVarChar(200)
+  leave_type_arb               String?           @db.NVarChar(200)
+  need_approval_flag           Boolean?          @default(false, map: "DF__leave_typ__need___0F2D40CE")
+  official_flag                Boolean?          @default(false, map: "DF__leave_typ__offic__10216507")
+  status_flag                  Boolean           @default(false, map: "DF__leave_typ__statu__11158940")
+  allow_attachment_flag        Boolean?          @default(false, map: "DF__leave_typ__allow__1209AD79")
+  workflow_id                  Int?
+  mandatory_justification_flag Boolean?          @default(false, map: "DF__leave_typ__manda__12FDD1B2")
+  total_entitled_days          Decimal?          @db.Decimal(10, 2)
+  full_pay_days                Decimal?          @db.Decimal(10, 2)
+  half_pay_days                Decimal?          @db.Decimal(10, 2)
+  unpaid_days                  Decimal?          @db.Decimal(10, 2)
+  apply_prior_to_days          Decimal?          @db.Decimal(10, 2)
+  is_AL_flag                   Boolean?          @default(false, map: "DF__leave_typ__is_AL__13F1F5EB")
+  is_SL_flag                   Boolean?          @default(false, map: "DF__leave_typ__is_SL__14E61A24")
+  exclude_holiday_flag         Boolean?          @default(false, map: "DF__leave_typ__exclu__15DA3E5D")
+  exclude_weekend_flag         Boolean?          @default(false, map: "DF__leave_typ__exclu__16CE6296")
+  apply_not_laterthandays_flag Boolean?
+  validation_mandatory_flag    Boolean?
+  leave_by_overtime_flag       Boolean?
+  carryforward_flag            Boolean?          @default(false, map: "DF__leave_typ__carry__17C286CF")
+  specific_gender              String?           @db.VarChar(10)
+  created_id                   Int
+  created_date                 DateTime          @default(now(), map: "DF__leave_typ__creat__18B6AB08") @db.DateTime
+  last_updated_id              Int
+  last_updated_date            DateTime          @default(now(), map: "DF__leave_typ__last___19AACF41") @db.DateTime
+  employee_leaves              employee_leaves[]
+}
+
+model local_SparkEmployeeLocationdetailsLocal {
+  EmployeeNumber  String    @id(map: "PK_SAP_SparkEmployeeLocationdetailsLocal_EmployeeNumber") @db.NVarChar(50)
+  NameEng         String?   @db.NVarChar(200)
+  LocationCode    String?   @db.NVarChar(50)
+  LocationEng     String?   @db.NVarChar(200)
+  CountryCode     String?   @db.NVarChar(50)
+  Radius          String?   @db.NVarChar(50)
+  Geolocation     String?   @db.NVarChar(200)
+  City            String?   @db.NVarChar(100)
+  FromDate        DateTime? @db.DateTime
+  ToDate          DateTime? @db.DateTime
+  LastChangedDate DateTime? @db.DateTime
+  LastChangedTime DateTime? @db.Time
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model local_users {
+  login       String @db.NVarChar(200)
+  password    String @db.NVarChar(256)
+  employee_id Int
+
+  @@ignore
+}
+
+model locations {
+  location_id       Int             @id(map: "PK__location__771831EA35437C34") @default(autoincrement())
+  location_code     String          @unique(map: "UQ_location_code") @db.NVarChar(200)
+  location_eng      String          @db.NVarChar(200)
+  location_arb      String          @db.NVarChar(200)
+  city              String?         @db.NVarChar(500)
+  region_name       String?         @db.NVarChar(500)
+  country_code      String?         @db.NVarChar(50)
+  radius            Int?
+  created_id        Int
+  created_date      DateTime        @default(now(), map: "DF_location_created_date") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime        @default(now(), map: "DF_location_updated_date") @db.DateTime
+  geolocation       String?         @db.NVarChar(500)
+  countries         countries?      @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_location_country_Code")
+  organizations     organizations[]
+  schedules         schedules[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model missingemail {
+  Employee_ID String? @db.NVarChar(Max)
+  SAP_ID      String? @db.NVarChar(Max)
+  Name        String? @db.NVarChar(Max)
+
+  @@ignore
+}
+
+model org_dashboard_snapshots {
+  snapshot_id   BigInt   @id(map: "PK__org_dash__C27CFBF7D8474465") @default(autoincrement())
+  org_id        Int
+  snapshot_date DateTime @db.Date
+  action        String   @db.NVarChar(50)
+  data          String   @db.NVarChar(Max)
+  computed_at   DateTime @default(dbgenerated("getutcdate()"), map: "DF__org_dashb__compu__31E24B85") @db.DateTime
+
+  @@unique([org_id, snapshot_date, action], map: "UQ_snapshot")
+  @@unique([org_id, snapshot_date, action], map: "UX_OrgSnapshot_Lookup")
+  @@index([org_id, snapshot_date, action], map: "IX_snapshots_lookup")
+}
+
+model Org_WorkHours {
+  config_id           Int       @id(map: "PK__Org_Work__4AD1BFF1849D56FB") @default(autoincrement())
+  org_id              Int
+  employee_type_id    Int?
+  required_work_hours Decimal?  @db.Decimal(5, 2)
+  created_on          DateTime? @default(now(), map: "DF__Org_WorkH__creat__0C26B6F1") @db.DateTime
+}
+
+model Org_WorkHours_Config {
+  org_id              Int       @id(map: "PK__Org_Work__F6AD801265191308")
+  required_work_hours Decimal   @db.Decimal(5, 2)
+  created_on          DateTime? @default(now(), map: "DF__Org_WorkH__creat__3E923B2D") @db.DateTime
+}
+
+model organization_schedules {
+  organization_schedule_id                                          Int           @id(map: "PK__organiza__085095285C1FDF1A") @default(autoincrement())
+  organization_id                                                   Int
+  from_date                                                         DateTime      @db.DateTime
+  to_date                                                           DateTime?     @db.DateTime
+  monday_schedule_id                                                Int?
+  tuesday_schedule_id                                               Int?
+  wednesday_schedule_id                                             Int?
+  thursday_schedule_id                                              Int?
+  friday_schedule_id                                                Int?
+  saturday_schedule_id                                              Int?
+  sunday_schedule_id                                                Int?
+  created_id                                                        Int
+  created_date                                                      DateTime      @default(now(), map: "DF__organizat__creat__1C873BEC") @db.DateTime
+  last_updated_id                                                   Int
+  last_updated_date                                                 DateTime      @default(now(), map: "DF__organizat__last___1D7B6025") @db.DateTime
+  employee_type_id                                                  Int?
+  organizations                                                     organizations @relation(fields: [organization_id], references: [organization_id], onUpdate: NoAction, map: "FK_organization_schedules_organizations")
+  schedules_organization_schedules_monday_schedule_idToschedules    schedules?    @relation("organization_schedules_monday_schedule_idToschedules", fields: [monday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules")
+  schedules_organization_schedules_tuesday_schedule_idToschedules   schedules?    @relation("organization_schedules_tuesday_schedule_idToschedules", fields: [tuesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules1")
+  schedules_organization_schedules_wednesday_schedule_idToschedules schedules?    @relation("organization_schedules_wednesday_schedule_idToschedules", fields: [wednesday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules2")
+  schedules_organization_schedules_thursday_schedule_idToschedules  schedules?    @relation("organization_schedules_thursday_schedule_idToschedules", fields: [thursday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules3")
+  schedules_organization_schedules_friday_schedule_idToschedules    schedules?    @relation("organization_schedules_friday_schedule_idToschedules", fields: [friday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules4")
+  schedules_organization_schedules_saturday_schedule_idToschedules  schedules?    @relation("organization_schedules_saturday_schedule_idToschedules", fields: [saturday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules5")
+  schedules_organization_schedules_sunday_schedule_idToschedules    schedules?    @relation("organization_schedules_sunday_schedule_idToschedules", fields: [sunday_schedule_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_organization_schedules_schedules6")
+}
+
+model organization_types {
+  organization_type_id  Int             @id(map: "PK__organiza__466C7A24FA1B8AD9") @default(autoincrement())
+  organization_type_arb String          @db.NVarChar(500)
+  organization_type_eng String          @db.NVarChar(500)
+  org_type_level        Int             @default(1, map: "DF__organizat__org_t__1E6F845E")
+  created_id            Int
+  created_date          DateTime        @default(now(), map: "DF_organization_types_created_date") @db.DateTime
+  last_updated_id       Int
+  last_updated_date     DateTime        @default(now(), map: "DF_organization_types_last_updated_time") @db.DateTime
+  organizations         organizations[]
+}
+
+model organizations {
+  organization_id          Int                        @id(map: "PK__organiza__C0B2F432BE0A715F") @default(autoincrement())
+  organization_type_id     Int
+  organization_code        String                     @db.NVarChar(200)
+  organization_eng         String                     @db.NVarChar(500)
+  organization_arb         String                     @db.NVarChar(500)
+  parent_id                Int?
+  position_in_grid         Int?                       @default(0, map: "DF__organizat__posit__214BF109")
+  location_id              Int?
+  created_id               Int
+  created_date             DateTime                   @default(now(), map: "DF_organizations_created_date") @db.DateTime
+  last_updated_id          Int
+  last_updated_date        DateTime                   @default(now(), map: "DF_organizations_last_updated_time") @db.DateTime
+  dept_admin_organizations dept_admin_organizations[]
+  dept_org_mapping         dept_org_mapping[]
+  organization_schedules   organization_schedules[]
+  locations                locations?                 @relation(fields: [location_id], references: [location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Org_Locations")
+  organization_types       organization_types         @relation(fields: [organization_type_id], references: [organization_type_id], onUpdate: NoAction, map: "FK_organizations_organization_types")
+  organizations            organizations?             @relation("organizationsToorganizations", fields: [parent_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_orgs_organizations")
+  other_organizations      organizations[]            @relation("organizationsToorganizations")
+  schedules                schedules[]
+
+  @@unique([organization_code, parent_id], map: "UQ_organization_code_parent")
+}
+
+model permission_types {
+  permission_type_id             Int                          @id(map: "PK__permissi__FA9F17E9E40F7595") @default(autoincrement())
+  permission_type_code           String                       @unique(map: "UQ_permission_type_code") @db.NVarChar(50)
+  permission_type_arb            String                       @db.NVarChar(200)
+  permission_type_eng            String                       @db.NVarChar(200)
+  max_perm_per_day               Int?
+  max_minutes_per_day            Int?
+  max_perm_per_month             Int?
+  max_minutes_per_month          Int?
+  group_apply_flag               Boolean                      @default(false, map: "DF__permissio__group__27E3DFFF")
+  official_flag                  Boolean?                     @default(false, map: "DF__permissio__offic__28D80438")
+  full_day_permission_flag       Boolean?                     @default(false, map: "DF__permissio__full___29CC2871")
+  status_flag                    Boolean                      @default(false, map: "DF__permissio__Statu__2AC04CAA")
+  workflow_id                    Int?
+  specific_gender                String?                      @db.VarChar(1)
+  medical_pass_flag              Boolean?                     @default(false, map: "DF__permissio__medic__2CA8951C")
+  mandatory_comments_flag        Boolean?                     @default(false, map: "DF__permissio__manda__2D9CB955")
+  mandatory_attachment_flag      Boolean?                     @default(false, map: "DF__permissio__manda__2E90DD8E")
+  apply_ramadan_restriction_flag Boolean?                     @default(false, map: "DF__permissio__apply__2F8501C7")
+  minutes_permission_flag        Boolean?                     @default(false, map: "DF__permissio__minut__30792600")
+  from_to_time_permission_flag   Boolean?                     @default(false, map: "DF__permissio__from___316D4A39")
+  weekdays_permission_flag       Boolean?                     @default(false, map: "DF__permissio__weekd__32616E72")
+  created_id                     Int
+  created_date                   DateTime                     @default(now(), map: "DF__permissio__creat__335592AB") @db.DateTime
+  last_updated_id                Int
+  last_updated_date              DateTime                     @default(now(), map: "DF__permissio__last___3449B6E4") @db.DateTime
+  employee_short_permissions     employee_short_permissions[]
+}
+
+model ramadan_dates {
+  ramadan_id        Int       @id(map: "PK__ramadan___CBC82C2B37710F64") @default(autoincrement())
+  ramadan_name_eng  String?   @unique(map: "UQ_ramadan_name_eng") @db.NVarChar(50)
+  ramadan_name_arb  String?   @unique(map: "UQ_ramadan_name_arb") @db.NVarChar(50)
+  remarks           String?   @db.NVarChar(255)
+  from_date         DateTime? @unique(map: "UQ_ramadan_Dates_from_date") @db.DateTime
+  to_date           DateTime? @unique(map: "UQ_ramadan_Dates_to_date") @db.DateTime
+  created_id        Int?
+  created_date      DateTime? @default(now(), map: "DF__ramadan_d__creat__308E3499") @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime? @default(now(), map: "DF__ramadan_d__updat__318258D2") @db.DateTime
+}
+
+model reports_mail {
+  reports_mail_id   Int       @id(map: "PK__reports___1DBE22C5FF8568E1") @default(autoincrement())
+  to_email          String?   @db.VarChar(500)
+  cc_email          String?   @db.VarChar(500)
+  parent_ids        String?   @db.VarChar(Max)
+  organization_ids  String?   @db.VarChar(Max)
+  created_id        Int
+  created_date      DateTime? @default(now(), map: "DF__reports_m__creat__7D4E87B5") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime? @default(now(), map: "DF__reports_m__last___7E42ABEE") @db.DateTime
+}
+
+model SAP_EmpDetails {
+  EmployeeNumber   String    @id(map: "PK_EmpDetails") @db.NVarChar(20)
+  HireDate         DateTime? @db.Date
+  ManagerName      String?   @db.NVarChar(Max)
+  ManagerFlag      Boolean?
+  OrganizationDesc String?   @db.NVarChar(400)
+  StatusFlag       String?   @db.NVarChar(50)
+  GradeDesc        String?   @db.NVarChar(400)
+  NameEng          String?   @db.NVarChar(Max)
+  DesignationDesc  String?   @db.NVarChar(400)
+  NameArb          String?   @db.NVarChar(Max)
+  NationDesc       String?   @db.NVarChar(200)
+  Email            String?   @db.NVarChar(200)
+  RegionDesc       String?   @db.NVarChar(200)
+  Username         String?   @db.NVarChar(200)
+  EmployeeTypeDesc String?   @db.NVarChar(400)
+  Mobile           String?   @db.NVarChar(50)
+  Gender           String?   @db.NVarChar(20)
+  ManagerCode      String?   @db.NVarChar(50)
+  OrganizationCode String?   @db.NVarChar(50)
+  GradeCode        String?   @db.NVarChar(50)
+  DesignationCode  String?   @db.NVarChar(50)
+  NationCode       String?   @db.NVarChar(10)
+  RegionCode       String?   @db.NVarChar(50)
+  EmployeeType     String?   @db.NVarChar(10)
+  CompanyCode      String?   @db.NVarChar(10)
+  CompanyName      String?   @db.NVarChar(100)
+  Vertical         String?   @db.NVarChar(100)
+  CostCenter       String?   @db.NVarChar(10)
+  CostCenterName   String?   @db.NVarChar(400)
+}
+
+model SAP_Empleavedetails {
+  RowId            Int     @id(map: "PK__SAP_Empl__FFEE7431A7A887D9") @default(autoincrement())
+  PersonId         String? @db.NVarChar(50)
+  PersonNumber     String? @db.NVarChar(50)
+  StartDate        String? @db.NVarChar(20)
+  EndDate          String? @db.NVarChar(20)
+  TypeCode         String? @db.NVarChar(20)
+  Remarks          String? @db.NVarChar(255)
+  StatusFlag       String? @db.NVarChar(50)
+  ApprovalStatus   String? @db.NVarChar(50)
+  UpdateDateTime   String? @db.NVarChar(20)
+  CreationDateTime String? @db.NVarChar(20)
+  ReferenceId      String? @db.NVarChar(50)
+  Date             String? @db.NVarChar(20)
+}
+
+model SAP_Empleavedetails_Professionals {
+  LeaveRowId              Int       @id(map: "PK__SAP_Empl__72BEBCDCEA3733A9") @default(autoincrement())
+  userId                  String?   @db.NVarChar(100)
+  timeType                String?   @db.NVarChar(200)
+  startDate               DateTime? @db.Date
+  endDate                 DateTime? @db.Date
+  approvalStatus          String?   @db.NVarChar(50)
+  quantityInDays          Decimal?  @db.Decimal(10, 2)
+  CreatedOn               DateTime? @default(now(), map: "DF__SAP_Emple__Creat__15E52B55") @db.DateTime
+  absenceDurationCategory String?   @db.NVarChar(500)
+  quantityInHours         Decimal?  @db.Decimal(10, 2)
+}
+
+model SAP_LocationMaster {
+  LocationCode String  @id(map: "PK__SAP_Loca__DDB144D485DDD041") @db.NVarChar(50)
+  LocationEng  String? @db.NVarChar(200)
+  CountryCode  String? @db.NVarChar(50)
+  Radius       String? @db.NVarChar(50)
+  Geolocation  String? @db.NVarChar(200)
+  City         String? @db.NVarChar(100)
+}
+
+model SAP_SparkEmployeeLocationdetails {
+  EmployeeNumber  String    @id(map: "PK_SAP_SparkEmployeeLocationdetails_EmployeeNumber") @db.NVarChar(50)
+  NameEng         String?   @db.NVarChar(200)
+  LocationCode    String?   @db.NVarChar(50)
+  LocationEng     String?   @db.NVarChar(200)
+  CountryCode     String?   @db.NVarChar(50)
+  Radius          String?   @db.NVarChar(50)
+  Geolocation     String?   @db.NVarChar(200)
+  City            String?   @db.NVarChar(100)
+  FromDate        DateTime? @db.DateTime
+  ToDate          DateTime? @db.DateTime
+  LastChangedDate DateTime? @db.DateTime
+  LastChangedTime DateTime? @db.Time
+}
+
+model schedules {
+  schedule_id                                                                    Int                       @id(map: "PK__schedule__C46A8A6FECC79A35") @default(autoincrement())
+  organization_id                                                                Int
+  schedule_code                                                                  String                    @db.NChar(50)
+  in_time                                                                        DateTime?                 @db.Time
+  out_time                                                                       DateTime?                 @db.Time
+  flexible_min                                                                   Int?                      @default(0, map: "DF__schedules__flexi__01892CED")
+  grace_in_min                                                                   Int?                      @default(0, map: "DF__schedules__grace__027D5126")
+  grace_out_min                                                                  Int?                      @default(0, map: "DF__schedules__grace__0371755F")
+  open_shift_flag                                                                Boolean?                  @default(false, map: "DF__schedules__open___04659998")
+  night_shift_flag                                                               Boolean?                  @default(false, map: "DF__schedules__night__0559BDD1")
+  sch_color                                                                      String?                   @db.VarChar(10)
+  ramadan_flag                                                                   Boolean?                  @default(false, map: "DF__schedules__ramad__064DE20A")
+  sch_parent_id                                                                  Int?
+  required_work_hours                                                            String?                   @db.NVarChar(10)
+  status_flag                                                                    Boolean?                  @default(true, map: "DF__schedules__Statu__08362A7C")
+  calculate_worked_hrs_flag                                                      Boolean?                  @default(false, map: "DF__schedules__calcu__092A4EB5")
+  default_overtime_flag                                                          Boolean?                  @default(false, map: "DF__schedules__defau__0A1E72EE")
+  default_break_hrs_flag                                                         Boolean?                  @default(false, map: "DF__schedules__defau__0B129727")
+  override_schedule_on_holiday_flag                                              Boolean?                  @default(false, map: "DF__schedules__overr__0C06BB60")
+  reduce_required_hrs_flag                                                       Boolean?                  @default(false, map: "DF__schedules__reduc__0CFADF99")
+  created_id                                                                     Int
+  created_date                                                                   DateTime                  @default(now(), map: "DF__schedules__creat__0DEF03D2") @db.DateTime
+  last_updated_id                                                                Int
+  last_updated_date                                                              DateTime                  @default(now(), map: "DF__schedules__last___0EE3280B") @db.DateTime
+  schedule_location                                                              Int?
+  inactive_date                                                                  DateTime?                 @db.DateTime
+  employee_monthly_roster_employee_monthly_roster_D1Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D1Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D10Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D10Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D11Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D11Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D12Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D12Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D13Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D13Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D14Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D14Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D15Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D15Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D16Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D16Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D17Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D17Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D18Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D18Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D19Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D19Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D2Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D2Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D20Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D20Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D21Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D21Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D22Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D22Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D23Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D23Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D24Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D24Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D25Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D25Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D26Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D26Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D27Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D27Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D28Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D28Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D29Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D29Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D3Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D3Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D30Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D30Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D31Toschedules                 employee_monthly_roster[] @relation("employee_monthly_roster_D31Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D4Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D4Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D5Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D5Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D6Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D6Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D7Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D7Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D8Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D8Toschedules")
+  employee_monthly_roster_employee_monthly_roster_D9Toschedules                  employee_monthly_roster[] @relation("employee_monthly_roster_D9Toschedules")
+  employee_schedules_employee_schedules_monday_schedule_idToschedules            employee_schedules[]      @relation("employee_schedules_monday_schedule_idToschedules")
+  employee_schedules_employee_schedules_tuesday_schedule_idToschedules           employee_schedules[]      @relation("employee_schedules_tuesday_schedule_idToschedules")
+  employee_schedules_employee_schedules_wednesday_schedule_idToschedules         employee_schedules[]      @relation("employee_schedules_wednesday_schedule_idToschedules")
+  employee_schedules_employee_schedules_thursday_schedule_idToschedules          employee_schedules[]      @relation("employee_schedules_thursday_schedule_idToschedules")
+  employee_schedules_employee_schedules_friday_schedule_idToschedules            employee_schedules[]      @relation("employee_schedules_friday_schedule_idToschedules")
+  employee_schedules_employee_schedules_saturday_schedule_idToschedules          employee_schedules[]      @relation("employee_schedules_saturday_schedule_idToschedules")
+  employee_schedules_employee_schedules_sunday_schedule_idToschedules            employee_schedules[]      @relation("employee_schedules_sunday_schedule_idToschedules")
+  group_schedules_group_schedules_monday_schedule_idToschedules                  group_schedules[]         @relation("group_schedules_monday_schedule_idToschedules")
+  group_schedules_group_schedules_tuesday_schedule_idToschedules                 group_schedules[]         @relation("group_schedules_tuesday_schedule_idToschedules")
+  group_schedules_group_schedules_wednesday_schedule_idToschedules               group_schedules[]         @relation("group_schedules_wednesday_schedule_idToschedules")
+  group_schedules_group_schedules_thursday_schedule_idToschedules                group_schedules[]         @relation("group_schedules_thursday_schedule_idToschedules")
+  group_schedules_group_schedules_friday_schedule_idToschedules                  group_schedules[]         @relation("group_schedules_friday_schedule_idToschedules")
+  group_schedules_group_schedules_saturday_schedule_idToschedules                group_schedules[]         @relation("group_schedules_saturday_schedule_idToschedules")
+  group_schedules_group_schedules_sunday_schedule_idToschedules                  group_schedules[]         @relation("group_schedules_sunday_schedule_idToschedules")
+  organization_schedules_organization_schedules_monday_schedule_idToschedules    organization_schedules[]  @relation("organization_schedules_monday_schedule_idToschedules")
+  organization_schedules_organization_schedules_tuesday_schedule_idToschedules   organization_schedules[]  @relation("organization_schedules_tuesday_schedule_idToschedules")
+  organization_schedules_organization_schedules_wednesday_schedule_idToschedules organization_schedules[]  @relation("organization_schedules_wednesday_schedule_idToschedules")
+  organization_schedules_organization_schedules_thursday_schedule_idToschedules  organization_schedules[]  @relation("organization_schedules_thursday_schedule_idToschedules")
+  organization_schedules_organization_schedules_friday_schedule_idToschedules    organization_schedules[]  @relation("organization_schedules_friday_schedule_idToschedules")
+  organization_schedules_organization_schedules_saturday_schedule_idToschedules  organization_schedules[]  @relation("organization_schedules_saturday_schedule_idToschedules")
+  organization_schedules_organization_schedules_sunday_schedule_idToschedules    organization_schedules[]  @relation("organization_schedules_sunday_schedule_idToschedules")
+  locations                                                                      locations?                @relation(fields: [schedule_location], references: [location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Sch_Location")
+  organizations                                                                  organizations             @relation(fields: [organization_id], references: [organization_id], onUpdate: NoAction, map: "FK_schedules_orgid")
+  schedules                                                                      schedules?                @relation("schedulesToschedules", fields: [sch_parent_id], references: [schedule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_schedules_schid")
+  other_schedules                                                                schedules[]               @relation("schedulesToschedules")
+}
+
+model sec_modules {
+  module_id            Int                   @id(map: "PK__sec_modu__1A2D0653ADF3C9A7") @default(autoincrement())
+  module_name          String                @unique(map: "UQ_sec_module_name") @db.NVarChar(50)
+  privilege_group_id   Int?
+  created_id           Int
+  created_date         DateTime              @default(now(), map: "DF__sec_modul__creat__3A42875C") @db.DateTime
+  last_updated_id      Int
+  last_updated_date    DateTime              @default(now(), map: "DF__sec_modul__last___6E0C4425") @db.DateTime
+  module_type          String?               @db.NVarChar(50)
+  sec_privilege_groups sec_privilege_groups? @relation(fields: [privilege_group_id], references: [privilege_group_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sec_modules_sec_groups")
+  sec_privileges       sec_privileges[]
+  sec_sub_modules      sec_sub_modules[]
+}
+
+model sec_privilege_groups {
+  privilege_group_id Int           @id(map: "PK__sec_priv__A7A97509796298C5") @default(autoincrement())
+  group_name         String        @db.NVarChar(50)
+  created_id         Int
+  created_date       DateTime      @default(now(), map: "DF__sec_privi__creat__339589CD") @db.DateTime
+  last_updated_id    Int
+  last_updated_date  DateTime      @default(now(), map: "DF__sec_privi__last___6A3BB341") @db.DateTime
+  sec_modules        sec_modules[]
+}
+
+model sec_privileges {
+  privilege_id      Int          @id(map: "PK__sec_priv__F94BCCE2083E95CA") @default(autoincrement())
+  privilege_name    String       @db.NVarChar(50)
+  module_id         Int?
+  last_updated_id   Int
+  last_updated_date DateTime     @default(now(), map: "DF__sec_privi__last___43A1090D") @db.DateTime
+  created_id        Int?
+  created_date      DateTime?    @db.DateTime
+  sec_modules       sec_modules? @relation(fields: [module_id], references: [module_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sec_privileges_sec_modules")
+}
+
+model sec_role_privileges {
+  role_privilege_id Int              @id(map: "PK__sec_role__4AEABB1C39E0AC28") @default(autoincrement())
+  role_id           Int
+  sub_module_id     Int?
+  scope             String           @db.NChar(5)
+  access_flag       Boolean?         @default(false, map: "DF__sec_role___acces__76A18A26")
+  view_flag         Boolean?         @default(false, map: "DF__sec_role___view___7795AE5F")
+  create_flag       Boolean?         @default(false, map: "DF__sec_role___creat__7889D298")
+  edit_flag         Boolean?         @default(false, map: "DF__sec_role___edit___797DF6D1")
+  delete_flag       Boolean?         @default(false, map: "DF__sec_role___delet__7A721B0A")
+  created_id        Int
+  created_date      DateTime         @default(now(), map: "DF__sec_role___creat__56DEC60A") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime         @default(now(), map: "DF__sec_role___last___7B663F43") @db.DateTime
+  sec_roles         sec_roles        @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_sec_role_privileges_sec_roles")
+  sec_sub_modules   sec_sub_modules? @relation(fields: [sub_module_id], references: [sub_module_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sec_roleprivileges_submodules")
+}
+
+model sec_role_tab_privileges {
+  role_tab_privilege_id Int      @id(map: "PK__sec_role__772F78BD57B271B3") @default(autoincrement())
+  role_id               Int
+  tab_id                Int
+  sub_module_id         Int
+  access_flag           Boolean  @default(false, map: "DF__sec_role___acces__3EFC4F81")
+  view_flag             Boolean  @default(false, map: "DF__sec_role___view___3FF073BA")
+  create_flag           Boolean  @default(false, map: "DF__sec_role___creat__40E497F3")
+  edit_flag             Boolean  @default(false, map: "DF__sec_role___edit___41D8BC2C")
+  delete_flag           Boolean  @default(false, map: "DF__sec_role___delet__42CCE065")
+  created_id            Int
+  created_date          DateTime @default(now(), map: "DF__sec_role___creat__43C1049E") @db.DateTime
+  last_updated_id       Int
+  last_updated_date     DateTime @default(now(), map: "DF__sec_role___last___44B528D7") @db.DateTime
+  sec_tabs              sec_tabs @relation(fields: [tab_id], references: [tab_id], onUpdate: NoAction, map: "FK_role_tab_tab")
+
+  @@unique([role_id, tab_id, sub_module_id], map: "UQ_role_tab_submodule")
+}
+
+model sec_roles {
+  role_id             Int                   @id(map: "PK__sec_role__760965CC4459953E") @default(autoincrement())
+  role_name           String                @unique(map: "UQ_role_name") @db.NVarChar(20)
+  editable_flag       Boolean?              @default(false, map: "DF__sec_roles__edita__3F865F66")
+  created_id          Int
+  created_date        DateTime              @default(now(), map: "DF__sec_roles__creat__4C613797") @db.DateTime
+  last_updated_id     Int?
+  last_updated_date   DateTime              @default(now(), map: "DF__sec_roles__last___407A839F") @db.DateTime
+  parent_ids          String?               @db.NVarChar(Max)
+  organization_ids    String?               @db.NVarChar(Max)
+  sec_role_privileges sec_role_privileges[]
+  sec_user_roles      sec_user_roles[]
+  workflow_type_steps workflow_type_steps[]
+}
+
+model sec_sub_modules {
+  sub_module_id       Int                   @id(map: "PK__sec_sub___E0B4513615350E6F") @default(autoincrement())
+  sub_module_name     String                @db.NVarChar(50)
+  module_id           Int?
+  created_id          Int
+  created_date        DateTime              @default(now(), map: "DF__sec_sub_m__creat__43CBF196") @db.DateTime
+  last_updated_id     Int
+  last_updated_date   DateTime              @default(now(), map: "DF__sec_sub_m__last___71DCD509") @db.DateTime
+  sec_role_privileges sec_role_privileges[]
+  sec_modules         sec_modules?          @relation(fields: [module_id], references: [module_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sec_sub_modules_modules")
+  sec_tabs            sec_tabs[]
+
+  @@unique([sub_module_name, module_id], map: "UQ_sec_submodule_name")
+}
+
+model sec_tabs {
+  tab_id                  Int                       @id(map: "PK__sec_tabs__1214CB7C201EE839") @default(autoincrement())
+  tab_name                String                    @db.NVarChar(50)
+  sub_module_id           Int
+  created_id              Int
+  created_date            DateTime                  @default(now(), map: "DF__sec_tabs__create__2AF556D4") @db.DateTime
+  last_updated_id         Int
+  last_updated_date       DateTime                  @default(now(), map: "DF__sec_tabs__last_u__2BE97B0D") @db.DateTime
+  sec_role_tab_privileges sec_role_tab_privileges[]
+  sec_sub_modules         sec_sub_modules           @relation(fields: [sub_module_id], references: [sub_module_id], onUpdate: NoAction, map: "FK_sec_tabs_sub_modules")
+
+  @@unique([tab_name, sub_module_id], map: "UQ_tab_name_submodule")
+}
+
+model sec_user_roles {
+  user_role_id      Int       @id(map: "PK__sec_user__B8D9ABA2287BE0DE") @default(autoincrement())
+  user_id           Int
+  role_id           Int
+  created_id        Int
+  created_date      DateTime  @default(now(), map: "DF__sec_user___creat__63449CEF") @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime  @default(now(), map: "DF__sec_user___last___002AF460") @db.DateTime
+  sec_roles         sec_roles @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_sec_user_roles_sec_roles")
+  sec_users         sec_users @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_sec_user_roles_sec_users")
+}
+
+model sec_users {
+  user_id              Int              @id(map: "PK__sec_user__B9BE370F7934899D") @default(autoincrement())
+  login                String?          @unique(map: "IX_sec_users_login_notnull", where: raw("([login] IS NOT NULL)")) @db.NVarChar(200)
+  password             String?          @db.NVarChar(256)
+  employee_id          Int              @unique(map: "UQ_sec_users_employee_id")
+  created_id           Int
+  created_date         DateTime         @default(now(), map: "DF__sec_users__creat__6AE5BEB7") @db.DateTime
+  last_updated_id      Int
+  last_updated_date    DateTime         @default(now(), map: "DF__sec_users__last___62108194") @db.DateTime
+  access_control_panel Boolean?
+  access_mobile_app    Boolean?
+  is_ad_user           Boolean          @default(false, map: "DF_sec_users_IS_AD_USER")
+  app_type             String?          @db.NVarChar(100)
+  active_user          Boolean?
+  last_login           DateTime?        @db.DateTime
+  sec_user_roles       sec_user_roles[]
+  employee_master      employee_master  @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_sec_users_employees")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model sec_users_password {
+  user_id              Int      @default(autoincrement())
+  login                String?  @db.NVarChar(200)
+  password             String?  @db.NVarChar(256)
+  employee_id          Int
+  created_id           Int
+  created_date         DateTime @db.DateTime
+  last_updated_id      Int
+  last_updated_date    DateTime @db.DateTime
+  access_control_panel Boolean?
+  access_mobile_app    Boolean?
+  is_ad_user           Boolean
+
+  @@ignore
+}
+
+model sec_users_sync_log {
+  log_id          Int       @id(map: "PK__sec_user__9E2397E046DB0CFF") @default(autoincrement())
+  employee_id     Int?
+  user_id         Int?
+  old_active_user Boolean?
+  new_active_user Boolean?
+  sync_status     String?   @db.VarChar(20)
+  error_message   String?   @db.NVarChar(4000)
+  created_date    DateTime? @default(now(), map: "DF__sec_users__creat__03E676AB") @db.DateTime
+}
+
+model snapshot_job_log {
+  log_id        BigInt    @id(map: "PK__snapshot__9E2397E001E94009") @default(autoincrement())
+  org_id        Int?
+  snapshot_date DateTime? @db.Date
+  status        String    @db.VarChar(10)
+  message       String?   @db.NVarChar(500)
+  duration_ms   Int?
+  ran_at        DateTime  @default(dbgenerated("getutcdate()"), map: "DF__snapshot___ran_a__2D1D9668") @db.DateTime
+
+  @@index([ran_at(sort: Desc)], map: "IX_job_log")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model sp_employee_daily_report {
+  EmployeeID         Int?
+  EmployeeNo         String?   @db.NVarChar(50)
+  Name               String?   @db.NVarChar(200)
+  WorkDate           DateTime? @db.Date
+  WorkDay            String?   @db.NVarChar(20)
+  Shift              String?   @db.NVarChar(20)
+  OrganizationID     Int?
+  Organization       String?   @db.NVarChar(200)
+  EmployeeTypeID     Int?
+  EmployeeType       String?   @db.NVarChar(100)
+  IsAbsent           String?   @db.NVarChar(100)
+  GeoLocationIn      String?   @db.NVarChar(200)
+  GeoLocationOut     String?   @db.NVarChar(200)
+  PunchIn            String?   @db.VarChar(8)
+  PunchOut           String?   @db.VarChar(8)
+  DailyWorkedHrs     String?   @db.VarChar(8)
+  DailyMissedHrs     String?   @db.VarChar(8)
+  DailyExtraWork     String?   @db.VarChar(8)
+  MissedPunch        String?   @db.NVarChar(20)
+  ParentOrgID        Int?
+  ParentOrgCode      String?   @db.NVarChar(50)
+  ParentOrganization String?   @db.NVarChar(200)
+  DepartmentID       Int?
+  DepartmentCode     String?   @db.NVarChar(50)
+  Department         String?   @db.NVarChar(200)
+  ScheduleID         Int?
+  SchCode            String?   @db.NVarChar(50)
+  Comment            String?   @db.NVarChar(500)
+  Remarks            String?   @db.NVarChar(500)
+  EmployeeStatus     String?   @db.NVarChar(50)
+  CostCode           String?   @db.NVarChar(50)
+  CostCenter         String?   @db.NVarChar(100)
+  ManagerID          Int?
+  ManagerCode        String?   @db.NVarChar(50)
+  ManagerName        String?   @db.NVarChar(200)
+  MonthlyMissedHrs   String?   @db.NVarChar(8)
+  MonthlyExtraWork   String?   @db.NVarChar(8)
+  RecordCreatedDate  DateTime? @db.DateTime
+  RecordUpdatedDate  DateTime? @db.DateTime
+  SnapshotDate       DateTime? @db.Date
+  InsertedAt         DateTime  @default(now(), map: "DF__sp_employ__Inser__072CF7AA") @db.DateTime
+  schedule_in        DateTime? @db.Time
+  schedule_out       DateTime? @db.Time
+  GeoStatus          String?   @db.NVarChar(50)
+  DistanceIn         Float?
+  DistanceOut        Float?
+  IsInWithinSite     Boolean?
+  IsOutWithinSite    Boolean?
+
+  @@unique([EmployeeID, WorkDate], map: "UQ_EmpDate")
+  @@index([EmployeeID, WorkDate], map: "IX_sp_employee_daily_report_EmpDate")
+  @@index([WorkDate], map: "IX_sp_employee_daily_report_WorkDate")
+  @@ignore
+}
+
+model sp_employee_daily_report_log {
+  LogID           BigInt    @id(map: "PK__sp_emplo__5E5499A8F4C606EB") @default(autoincrement())
+  ProcessDate     DateTime  @db.Date
+  StartTime       DateTime
+  EndTime         DateTime?
+  DurationSeconds Int?
+  RowsDeleted     Int?
+  RowsInserted    Int?
+  Status          String    @default("RUNNING", map: "DF__sp_employ__Statu__21ABE3BC") @db.NVarChar(20)
+  ErrorMessage    String?   @db.NVarChar(Max)
+  TriggeredBy     String?   @default("suser_sname()", map: "DF__sp_employ__Trigg__22A007F5") @db.NVarChar(100)
+  JobRunID        String?   @db.UniqueIdentifier
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model SparkUsersDetailsLocal {
+  SAP_ID        String? @db.NVarChar(50)
+  Employee_Name String? @db.NVarChar(Max)
+  Email_Address String? @db.NVarChar(Max)
+
+  @@ignore
+}
+
+model Stg_AldarEstate_BiostarPunches {
+  LogID     BigInt    @id(map: "PK__Stg_Alda__5E5499A89A9786BB") @default(autoincrement())
+  EventID   Int
+  EmpCode   String    @db.NVarChar(50)
+  EmpName   String?   @db.NVarChar(200)
+  PunchDT   DateTime  @db.DateTime
+  DeviceID  String?   @db.NVarChar(100)
+  CreatedOn DateTime? @default(now(), map: "DF__Stg_Aldar__Creat__0C06BB60") @db.DateTime
+}
+
+model Stg_BiostarPunches {
+  LogID     BigInt    @id(map: "PK__Stg_Bios__5E5499A83AE844CD") @default(autoincrement())
+  EventID   Int
+  EmpCode   String    @db.NVarChar(50)
+  EmpName   String?   @db.NVarChar(200)
+  PunchDT   DateTime  @db.DateTime
+  DeviceID  String?   @db.NVarChar(100)
+  CreatedOn DateTime? @default(now(), map: "DF__Stg_Biost__Creat__4850AF91") @db.DateTime
+  PunchType String?   @db.VarChar(10)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Sync_SAP_Audit_Log {
+  ID                            Int      @default(autoincrement())
+  Sql_Process_ID                Decimal  @db.Decimal(18, 0)
+  Sql_Username                  String   @db.VarChar(200)
+  Sync_Object                   String   @db.VarChar(200)
+  TA_Object                     String   @db.VarChar(200)
+  Audit_Type                    String   @db.VarChar(50)
+  Obj_Error_Key                 String?  @db.VarChar(200)
+  Obj_Error_No                  Int?
+  Obj_Error_Severity            Int?
+  Obj_Error_State               Int?
+  Obj_Error_Proc                String?  @db.VarChar(200)
+  Obj_Error_Line                Int?
+  Obj_Error_Message             String?  @db.VarChar(500)
+  Sync_Object_Total_Count       Decimal? @db.Decimal(18, 0)
+  TA_Object_New_Record_Count    Decimal? @db.Decimal(18, 0)
+  TA_Object_Update_Record_Count Decimal? @db.Decimal(18, 0)
+  TA_Object_Failed_Record_Count Decimal? @db.Decimal(18, 0)
+  TA_Object_Total_Count         Decimal? @db.Decimal(18, 0)
+  Initiated_Source              String   @db.VarChar(50)
+  Initiated_Date                DateTime @db.DateTime
+  Initiated_By                  String   @db.VarChar(200)
+
+  @@ignore
+}
+
+model ta_emails {
+  ta_email_id       Int       @id(map: "PK__ta_email__333AD52C5EFC6346") @default(autoincrement())
+  to_text           String?   @db.NVarChar(Max)
+  subject_text      String?   @db.NVarChar(Max)
+  body_text         String?   @db.NVarChar(Max)
+  email_status      Int?
+  cc_email          String?   @db.NVarChar(Max)
+  bcc_email         String?   @db.NVarChar(Max)
+  processed_date    DateTime? @db.DateTime
+  created_id        Int?
+  created_date      DateTime? @db.DateTime
+  last_updated_id   Int?
+  last_updated_date DateTime? @db.DateTime
+}
+
+model user_tokens {
+  token_id          Int             @id(map: "PK__user_tok__CB3C9E1752D51CE3") @default(autoincrement())
+  employee_id       Int
+  refresh_token     String?         @db.NVarChar(Max)
+  created_date      DateTime        @default(now(), map: "DF__user_toke__creat__20E1DCB5") @db.DateTime
+  last_updated_date DateTime        @default(now(), map: "DF__user_toke__last___21D600EE") @db.DateTime
+  employee_master   employee_master @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_user_tokens_employee")
+}
+
+model weekly_violation_summary {
+  summary_id               Int       @id(map: "PK__weekly_v__85F93E839A806712") @default(autoincrement())
+  WeekStart                DateTime  @db.Date
+  WeekEnd                  DateTime  @db.Date
+  ManagerID                Int?
+  ManagerName              String?   @db.NVarChar(255)
+  ManagerCode              String?   @db.NVarChar(50)
+  ManagerEmail             String?   @db.NVarChar(255)
+  TotalLateCount           Int?      @default(0, map: "DF__weekly_vi__Total__3E131840")
+  TotalEarlyOutCount       Int?      @default(0, map: "DF__weekly_vi__Total__3F073C79")
+  TotalMissedPunchCount    Int?      @default(0, map: "DF__weekly_vi__Total__3FFB60B2")
+  TotalIncompleteDutyCount Int?      @default(0, map: "DF__weekly_vi__Total__40EF84EB")
+  TotalViolatingEmployees  Int?      @default(0, map: "DF__weekly_vi__Total__41E3A924")
+  ViolationRowsJSON        String?   @db.NVarChar(Max)
+  CreatedAt                DateTime? @default(now(), map: "DF__weekly_vi__Creat__42D7CD5D")
+
+  @@index([ManagerID], map: "IX_weekly_violation_summary_ManagerID")
+  @@index([WeekStart, WeekEnd], map: "IX_weekly_violation_summary_WeekStart")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model weekOff_employees {
+  Emp_No        String    @db.NVarChar(50)
+  ID            String?   @db.NVarChar(50)
+  Name          String?   @db.NVarChar(50)
+  Date          DateTime? @db.Date
+  Desg          String?   @db.NVarChar(50)
+  Ops           String?   @db.NVarChar(50)
+  Cost_Centre   String?   @db.NVarChar(50)
+  column8       Int?
+  Manager       String?   @db.NVarChar(50)
+  Employee_type String?   @db.NVarChar(50)
+  Week_OFF      String    @db.NVarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model wfh_employees {
+  S_No         Int       @db.TinyInt
+  Emp_No       String    @db.NVarChar(50)
+  Emp_Name     String    @db.NVarChar(50)
+  Gender       String?   @db.NVarChar(50)
+  DOJ          DateTime? @db.Date
+  Position     String    @db.NVarChar(50)
+  Department   String    @db.NVarChar(50)
+  Cost_Center  String    @db.NVarChar(50)
+  Manager_ID   Int?
+  Manager_Name String    @db.NVarChar(50)
+  Prof_Tech    String    @db.NVarChar(50)
+  Remarks      String    @db.NVarChar(50)
+
+  @@ignore
+}
+
+model workflow_approval {
+  workflow_approval_id Int                 @id(map: "PK__workflow__76CBB3B90F3DA8F6") @default(autoincrement())
+  request_id           Int
+  workflow_steps_id    Int
+  approver_id          Int
+  approval_status      String?             @db.VarChar(50)
+  approval_date        DateTime?           @db.DateTime
+  comments             String?             @db.NVarChar(Max)
+  created_id           Int
+  created_date         DateTime?           @db.DateTime
+  last_updated_id      Int
+  last_updated_date    DateTime            @default(now(), map: "DF__workflow___last___53D770D6") @db.DateTime
+  workflow_request     workflow_request    @relation(fields: [request_id], references: [request_id], onUpdate: NoAction, map: "FK__workflow___reque__58DC1D15")
+  workflow_type_steps  workflow_type_steps @relation(fields: [workflow_steps_id], references: [workflow_steps_id], onUpdate: NoAction, map: "FK__workflow___workf__59D0414E")
+}
+
+model workflow_request {
+  request_id        Int                 @id(map: "PK__workflow__18D3B90FE1F6C91B") @default(autoincrement())
+  workflow_id       Int
+  transaction_id    Int
+  requestor_id      Int
+  request_date      DateTime?           @default(now(), map: "DF__workflow___reque__55FFB06A") @db.DateTime
+  current_status    String?             @db.VarChar(50)
+  action_remarks    String?             @db.NVarChar(Max)
+  created_id        Int
+  created_date      DateTime?           @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime            @default(now(), map: "DF__workflow___last___55BFB948") @db.DateTime
+  workflow_approval workflow_approval[]
+  workflow_types    workflow_types      @relation(fields: [workflow_id], references: [workflow_id], onUpdate: NoAction, map: "FK__workflow___workf__550B8C31")
+}
+
+model workflow_type_steps {
+  workflow_steps_id Int                 @id(map: "PK__workflow__0467757BD0C6B3A3") @default(autoincrement())
+  workflow_id       Int?
+  step_order        Int
+  step_eng          String?             @db.NVarChar(500)
+  step_arb          String?             @db.NVarChar(500)
+  role_id           Int?
+  is_final_step     Boolean?            @default(false, map: "DF__workflow___is_fi__56B3DD81")
+  created_id        Int
+  created_date      DateTime?           @db.DateTime
+  last_updated_id   Int
+  last_updated_date DateTime            @default(now(), map: "DF__workflow___last___57A801BA") @db.DateTime
+  workflow_approval workflow_approval[]
+  workflow_types    workflow_types?     @relation(fields: [workflow_id], references: [workflow_id], onDelete: NoAction, onUpdate: NoAction, map: "FK__workflow___workf__5046D714")
+  sec_roles         sec_roles?          @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_workflow_role")
+
+  @@unique([workflow_id, step_order], map: "UQ_workflow_step_order")
+}
+
+model workflow_types {
+  workflow_id           Int                   @id(map: "PK__workflow__64A76B704CD2078D") @default(autoincrement())
+  workflow_code         String                @unique(map: "UQ_workflow_code") @db.NVarChar(100)
+  workflow_name_eng     String?               @db.NVarChar(200)
+  workflow_name_arb     String?               @db.NVarChar(200)
+  created_id            Int
+  created_date          DateTime              @default(now(), map: "DF__workflow___creat__75634D2A") @db.DateTime
+  last_updated_id       Int
+  last_updated_date     DateTime              @default(now(), map: "DF__workflow___last___4D6A6A69") @db.DateTime
+  workflow_category_eng String?               @db.NVarChar(200)
+  workflow_category_arb String?               @db.NVarChar(200)
+  workflow_request      workflow_request[]
+  workflow_type_steps   workflow_type_steps[]
+}
