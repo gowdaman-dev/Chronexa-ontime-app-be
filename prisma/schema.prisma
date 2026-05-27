@@ -1575,6 +1575,7 @@ model sec_users {
   app_type             String?          @db.NVarChar(100)
   active_user          Boolean?
   last_login           DateTime?        @db.DateTime
+  license_keys         license_keys[]
   sec_user_roles       sec_user_roles[]
   employee_master      employee_master  @relation(fields: [employee_id], references: [employee_id], onUpdate: NoAction, map: "FK_sec_users_employees")
 }
@@ -1890,4 +1891,35 @@ model workflow_types {
   workflow_category_arb String?               @db.NVarChar(200)
   workflow_request      workflow_request[]
   workflow_type_steps   workflow_type_steps[]
+}
+
+model license_keys {
+  id           Int       @id(map: "PK__license___3213E83F1BC74319") @default(autoincrement())
+  user_id      Int
+  key_value    String    @unique(map: "idx_lk_key_value") @default("concat(upper(substring(replace(CONVERT([varchar](36),newid()),'-','),(1),(4))),'-',upper(substring(replace(CONVERT([varchar](36),newid()),'-','),(1),(4))),'-',upper(substring(replace(CONVERT([varchar](36),newid()),'-','),(1),(4))),'-',upper(substring(replace(CONVERT([varchar](36),newid()),'-','),(1),(4))))", map: "DF__license_k__key_v__5125ECB4") @db.VarChar(64)
+  is_used      Boolean   @default(false, map: "DF__license_k__is_us__521A10ED")
+  in_use       Boolean   @default(true, map: "DF__license_k__in_us__530E3526")
+  is_enabled   Boolean   @default(true, map: "DF__license_k__is_en__5402595F")
+  status       String    @default("INACTIVE", map: "DF__license_k__statu__54F67D98") @db.NVarChar(20)
+  device_id    String?   @db.NVarChar(128)
+  created_at   DateTime  @default(now(), map: "DF__license_k__creat__55EAA1D1") @db.DateTime
+  activated_at DateTime? @db.DateTime
+  expires_at   DateTime? @db.DateTime
+  sec_users    sec_users @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_license_user")
+
+  @@index([user_id], map: "idx_lk_user_id")
+}
+
+model SAP_SyncLog {
+  Id          Int       @id(map: "PK__SAP_Sync__3214EC07C0EF5EAC") @default(autoincrement())
+  JobName     String    @db.NVarChar(100)
+  Status      String    @db.NVarChar(20)
+  Message     String?   @db.NVarChar(Max)
+  Records     Int?
+  StartedAt   DateTime  @default(now(), map: "DF__SAP_SyncL__Start__59BB32B5")
+  EndedAt     DateTime?
+  DurationSec Int?
+
+  @@index([JobName, StartedAt(sort: Desc)], map: "IX_SAP_SyncLog_JobName_StartedAt")
+  @@index([Status], map: "IX_SAP_SyncLog_Status")
 }

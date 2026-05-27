@@ -1,37 +1,52 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  OnModuleDestroy,
-} from '@nestjs/common';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+import { PrismaMssql } from '@prisma/adapter-mssql';
+import * as dotenv from 'dotenv';
+import { ConfigService } from '@nestjs/config';
+
+dotenv.config();
+
+function normalizeSqlServerConnectionString(connectionString: string) {
+  if (/;?encrypt=/i.test(connectionString)) {
+    return connectionString;
+  }
+
+  return `${connectionString};encrypt=false`;
+}
 
 @Injectable()
-export class PrismaService
-  extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
-  private readonly logger = new Logger(PrismaService.name);
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
+  private prisma: PrismaClient;
+
+  constructor(private readonly configService: ConfigService) {
+    const connectionString = normalizeSqlServerConnectionString(
+      configService.getOrThrow<string>('DATABASE_URL'),
+    );
+
+    const adapter = new PrismaMssql(connectionString);
+
+    this.prisma = new PrismaClient({ adapter });
+  }
 
   async onModuleInit() {
-    try {
-      await this.$connect();
-      this.logger.log('Prisma connected');
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown Prisma error';
-      this.logger.error(
-        'Failed to connect to database. Verify DATABASE_URL and that the database server is reachable.',
-      );
-      this.logger.error(message);
-      throw error;
-    }
+    await this.prisma.$connect();
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
-    this.logger.log('Prisma disconnected');
+    await this.prisma.$disconnect();
+  }
+
+  [key: string]: any;
+
+  get $connect() {
+    return this.prisma.$connect.bind(this.prisma);
+  }
+
+  get $disconnect() {
+    return this.prisma.$disconnect.bind(this.prisma);
+  }
+
+  get $transaction() {
+    return this.prisma.$transaction.bind(this.prisma);
   }
 }
-
-export { Prisma as PrismaTypes };
