@@ -15,8 +15,7 @@ function normalizeSqlServerConnectionString(connectionString: string) {
 }
 
 @Injectable()
-export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private prisma: PrismaClient;
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly configService: ConfigService) {
     const connectionString = normalizeSqlServerConnectionString(
@@ -25,28 +24,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
     const adapter = new PrismaMssql(connectionString);
 
-    this.prisma = new PrismaClient({ adapter });
+    super({ adapter });
   }
 
   async onModuleInit() {
-    await this.prisma.$connect();
+    await this.$connect();
   }
 
   async onModuleDestroy() {
-    await this.prisma.$disconnect();
-  }
-
-  [key: string]: any;
-
-  get $connect() {
-    return this.prisma.$connect.bind(this.prisma);
-  }
-
-  get $disconnect() {
-    return this.prisma.$disconnect.bind(this.prisma);
-  }
-
-  get $transaction() {
-    return this.prisma.$transaction.bind(this.prisma);
+    await this.$disconnect();
   }
 }

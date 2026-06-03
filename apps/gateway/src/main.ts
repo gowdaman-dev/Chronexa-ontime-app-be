@@ -6,6 +6,7 @@ import {
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
+import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import compression from 'compression';
@@ -71,6 +72,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalFilters(new RpcExceptionFilter());
 
   app.use(
     '/docs',
@@ -104,7 +106,7 @@ async function bootstrap() {
       persistAuth: true,
       servers: [
         {
-          url: 'http://localhost:8000',
+          url: `http://localhost:${process.env.PORT || 3000}`,
           description: 'Local Development Server',
         },
       ],

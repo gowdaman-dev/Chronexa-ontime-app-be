@@ -1,18 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AuthServiceModule } from './auth-service.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ConfigService } from '@app/config';
 async function bootstrap() {
-  const port: number = process.env.port ? Number(process.env.port) : 3000;
-
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AuthServiceModule,
-    {
-      transport: Transport.TCP,
-      options: {
-        port,
+  const app = await NestFactory.create(AuthServiceModule);
+  const configService = app.get(ConfigService);
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.NATS,
+    options: {
+      servers: [configService.getOrThrow<string>('natsUrl')],
+      queue: 'auth_service_queue',
+      queueOptions: {
+        durable: false,
       },
     },
-  );
-  await app.listen();
+  });
+  await app.startAllMicroservices();
+  await app.init();
 }
 bootstrap();

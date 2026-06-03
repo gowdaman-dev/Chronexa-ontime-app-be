@@ -1,34 +1,50 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { UserServiceService } from './user-service.service';
-import { CreateUserServiceDto } from './dto/create-user-service.dto';
-import { UpdateUserServiceDto } from './dto/update-user-service.dto';
+import { CreateUserDto, UpdateUserDto, PaginationQueryDto } from '@app/dto';
+import {
+  ApiCreateUserOperation,
+  ApiGetAllUsersOperation,
+  ApiGetUserByIdOperation,
+  ApiUpdateUserOperation,
+  ApiDeleteUserOperation,
+} from '@app/dto/user.doc';
+import { ApiPaginationQueryParams } from '@app/dto/pagination.doc';
 
-@Controller('user-service')
+@ApiTags('User Management')
+@Controller({ path: 'users', version: '1' })
 export class UserServiceController {
-  constructor(private readonly userServiceService: UserServiceService) {}
+  constructor(private readonly userService: UserServiceService) {}
 
   @Post()
-  create(@Body() createUserServiceDto: CreateUserServiceDto) {
-    return this.userServiceService.create(createUserServiceDto);
+  @ApiCreateUserOperation()
+  create(@Body() dto: CreateUserDto) {
+    return this.userService.createUser(dto);
   }
 
   @Get()
-  findAll() {
-    return this.userServiceService.findAll();
+  @ApiGetAllUsersOperation()
+  @ApiPaginationQueryParams()
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.userService.findAllUsers(query.limit, query.offset);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userServiceService.findOne(+id);
+  @ApiGetUserByIdOperation()
+  findById(@Param('id') id: string) {
+    return this.userService.findUserById(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserServiceDto: UpdateUserServiceDto) {
-    return this.userServiceService.update(+id, updateUserServiceDto);
+  @ApiUpdateUserOperation()
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.updateUser(+id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userServiceService.remove(+id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDeleteUserOperation()
+  async delete(@Param('id') id: string) {
+    await this.userService.deleteUser(+id);
   }
 }

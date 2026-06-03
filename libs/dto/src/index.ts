@@ -1,2 +1,4 @@
-export * from './dto.module';
-export * from './dto.service';
+export * from './auth.dto';
+export * from './user.dto';
+export * from './employee.dto';
+export * from './pagination.dto';

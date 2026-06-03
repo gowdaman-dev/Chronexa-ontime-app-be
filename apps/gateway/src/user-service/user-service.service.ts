@@ -1,26 +1,65 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserServiceDto } from './dto/create-user-service.dto';
-import { UpdateUserServiceDto } from './dto/update-user-service.dto';
+import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, catchError, throwError } from 'rxjs';
 
 @Injectable()
 export class UserServiceService {
-  create(createUserServiceDto: CreateUserServiceDto) {
-    return 'This action adds a new userService';
+  constructor(@Inject('USER_SERVICE') private readonly client: ClientProxy) {}
+
+  private async send<T>(pattern: any, data?: any): Promise<T> {
+    return firstValueFrom(
+      this.client.send<T>(pattern, data ?? {}).pipe(
+        catchError((err: any) => {
+          if (err?.statusCode) {
+            return throwError(() => new HttpException(err.message, err.statusCode));
+          }
+          return throwError(() => new HttpException('Service unavailable', HttpStatus.SERVICE_UNAVAILABLE));
+        }),
+      ),
+    );
   }
 
-  findAll() {
-    return `This action returns all userService`;
+  createUser(data: any) {
+    return this.send('user.create', data);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} userService`;
+  findAllUsers(limit?: number, offset?: number) {
+    return this.send('user.get_all', { limit, offset });
   }
 
-  update(id: number, updateUserServiceDto: UpdateUserServiceDto) {
-    return `This action updates a #${id} userService`;
+  findUserById(id: number) {
+    return this.send('user.get_by_id', { id });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} userService`;
+  findUserByLogin(login: string) {
+    return this.send('user.get_by_login', { login });
+  }
+
+  updateUser(id: number, data: any) {
+    return this.send('user.update', { id, data });
+  }
+
+  deleteUser(id: number) {
+    return this.send('user.delete', { id });
+  }
+
+  createEmployee(data: any) {
+    return this.send('employee.create', data);
+  }
+
+  findAllEmployees(limit?: number, offset?: number) {
+    return this.send('employee.get_all', { limit, offset });
+  }
+
+  findEmployeeById(id: number) {
+    return this.send('employee.get_by_id', { id });
+  }
+
+  updateEmployee(id: number, data: any) {
+    return this.send('employee.update', { id, data });
+  }
+
+  deleteEmployee(id: number) {
+    return this.send('employee.delete', { id });
   }
 }
