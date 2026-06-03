@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '@app/redis';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class UserServiceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly cache: CacheService,
   ) {
     this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
@@ -84,6 +86,18 @@ export class UserServiceService {
   }
 
   async getAllUsers(limit = 20, offset = 0) {
+    const cacheKey = CACHE_KEYS.USERS_LIST;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) {
+      const sliced = cached.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: sliced,
+        total: cached.length,
+        hasNext: offset + limit < cached.length,
+      };
+    }
+
     const [users, total] = await Promise.all([
       this.prisma.sec_users.findMany({
         skip: offset,
@@ -95,9 +109,13 @@ export class UserServiceService {
       }),
       this.prisma.sec_users.count(),
     ]);
+
+    const data = users.map((u) => this.mapUserResponse(u));
+    await this.cache.set(cacheKey, data, CACHE_TTL.LIST);
+
     return {
       success: true,
-      data: users.map((u) => this.mapUserResponse(u)),
+      data,
       total,
       hasNext: offset + limit < total,
     };
@@ -124,6 +142,7 @@ export class UserServiceService {
     if (data.activeUser !== undefined) createData.active_user = data.activeUser;
 
     const user = await (this.prisma.sec_users.create as any)({ data: createData });
+    await this.cache.del(CACHE_KEYS.USERS_LIST);
     return this.getUserById(user.user_id);
   }
 
@@ -146,12 +165,14 @@ export class UserServiceService {
       where: { user_id: id },
       data: updateData,
     });
+    await this.cache.del(CACHE_KEYS.USERS_LIST);
     return this.getUserById(id);
   }
 
   async deleteUser(id: number) {
     await (this.prisma.sec_user_roles.deleteMany as any)({ where: { user_id: id } });
     await (this.prisma.sec_users.delete as any)({ where: { user_id: id } });
+    await this.cache.del(CACHE_KEYS.USERS_LIST);
     return { success: true };
   }
 
@@ -162,13 +183,29 @@ export class UserServiceService {
   }
 
   async getAllEmployees(limit = 20, offset = 0) {
+    const cacheKey = CACHE_KEYS.EMPLOYEES_LIST;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) {
+      const sliced = cached.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: sliced,
+        total: cached.length,
+        hasNext: offset + limit < cached.length,
+      };
+    }
+
     const [emps, total] = await Promise.all([
       this.prisma.employee_master.findMany({ skip: offset, take: limit }),
       this.prisma.employee_master.count(),
     ]);
+
+    const data = emps.map((e) => this.mapEmployeeResponse(e));
+    await this.cache.set(cacheKey, data, CACHE_TTL.LIST);
+
     return {
       success: true,
-      data: emps.map((e) => this.mapEmployeeResponse(e)),
+      data,
       total,
       hasNext: offset + limit < total,
     };
@@ -243,6 +280,7 @@ export class UserServiceService {
     }
 
     const emp = await (this.prisma.employee_master.create as any)({ data: createData });
+    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
     return this.mapEmployeeResponse(emp);
   }
 
@@ -317,11 +355,13 @@ export class UserServiceService {
       where: { employee_id: id },
       data: updateData,
     });
+    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
     return this.getEmployeeById(id);
   }
 
   async deleteEmployee(id: number) {
     await (this.prisma.employee_master.delete as any)({ where: { employee_id: id } });
+    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
     return { success: true };
   }
 }

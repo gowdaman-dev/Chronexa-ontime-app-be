@@ -1,98 +1,274 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Chronexa Mobile API Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS monorepo powering the Chronexa Mobile application backend — a microservices architecture with NATS transport, Redis caching, and RBAC authentication.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+┌─────────────┐     NATS      ┌───────────────┐
+│   Gateway   │ ◄──────────► │  auth-service  │
+│  (REST API) │               │ (JWT, AD Auth) │
+└──────┬──────┘               └───────────────┘
+       │                           ┌───────────────┐
+       │         NATS              │  user-service  │
+       └─────────────────────────► │ (Users/Emps)   │
+                                   └───────┬───────┘
+                                           │
+                              ┌────────────▼───────────┐
+                              │       SQL Server        │
+                              │  (Chronexa DB)          │
+                              └────────────────────────┘
 ```
 
-## Compile and run the project
+- **Gateway** — Public-facing REST API (port 3000). Validates auth, proxies requests to microservices via NATS.
+- **auth-service** — Authentication: local login, Azure AD login, JWT issuance/validation, token blacklisting.
+- **user-service** — User & employee CRUD operations with Prisma ORM against SQL Server.
 
-```bash
-# development
-$ npm run start
+## Project Structure
 
-# watch mode
-$ npm run start:dev
+```
+apps/
+├── gateway/                        # REST API Gateway
+│   └── src/
+│       ├── auth-service/           # Auth NATS client + controller
+│       ├── user-service/           # User NATS client + controller
+│       ├── employee-service/       # Employee NATS client + controller
+│       └── common/filters/         # Global exception filters
+├── auth-service/                   # Auth microservice (NATS listener)
+│   └── src/
+│       ├── auth-service.service.ts # Login, AD login, token logic
+│       └── auth-service.controller.ts  # NATS message handlers
+└── user-service/                   # User/Employee microservice (NATS listener)
+    └── src/
+        ├── user-service.service.ts # Prisma CRUD operations
+        └── user-service.controller.ts  # NATS message handlers
 
-# production mode
-$ npm run start:prod
+libs/
+├── auth/                           # Auth guards, RBAC, decorators
+│   └── src/
+│       ├── guards/                 # AuthGuard, RbacGuard, EmployeeTypeGuard
+│       ├── decorators/             # @Roles, @Public, @CurrentUser, @EmployeeType
+│       └── interfaces/             # AuthUser, IAuthService contracts
+├── dto/                            # Shared DTOs + Swagger doc decorators
+│   └── src/
+│       ├── *.dto.ts                # Validation DTOs (class-validator)
+│       └── *.doc.ts                # Swagger decorators (applyDecorators)
+├── redis/                          # Redis caching layer
+│   └── src/
+│       ├── redis.service.ts        # ioredis client wrapper
+│       └── cache.service.ts        # Higher-level cache with namespaced keys/TTLs
+├── prisma/                         # PrismaService (extends PrismaClient)
+├── config/                         # ConfigModule (env vars)
+├── common/                         # Audit interceptor, shared modules
+└── database/                       # Database utilities
 ```
 
-## Run tests
+## Authentication & Authorization
 
-```bash
-# unit tests
-$ npm run test
+### Flow
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+Request → AuthGuard → RbacGuard → EmployeeTypeGuard → Controller
 ```
 
-## Deployment
+All three guards are registered **globally** as `APP_GUARD`. Guards with no metadata on a handler pass through silently.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+| Guard | Bypass | Purpose |
+|---|---|---|
+| `AuthGuard` | `@Public()` | Extracts Bearer token, validates via NATS `auth.validate_token`, attaches `AuthUser` to `request.user` |
+| `RbacGuard` | No `@Roles()` | Checks `request.user.role` against required roles |
+| `EmployeeTypeGuard` | No `@EmployeeType()` | Checks `request.user.employeeType` against required type |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Role Derivation
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Role is computed from `employee_master.manager_flag`:
+- `manager_flag = true` → **Manager**
+- else → **Employee**
+
+### Employee Type
+
+Computed from `employee_master.employee_type_id`:
+- `employee_type_id = 26` → **Technical**
+- else → **Professional**
+
+### JWT Payload
+
+```json
+{
+  "sub": 100,
+  "userId": 1,
+  "role": "Manager",
+  "employeeType": "Professional",
+  "employeeId": 100,
+  "login": "user@chronexa.ai",
+  "isADUser": false
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Auth Decorators
 
-## Resources
+```typescript
+@Public()                              // Skip auth entirely
+@Roles('Manager')                      // Require Manager role
+@EmployeeType('Technical')            // Require Technical employee type
+@CurrentUser() user: AuthUser         // Inject authenticated user
+@CurrentUser('role') role: string     // Inject specific field
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## API Endpoints
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Authentication (`/v1/auth`)
 
-## Support
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/login` | Public | Local login with login/password |
+| POST | `/ad-login` | Public | Azure AD login with AD token |
+| POST | `/logout` | Public | Invalidate refresh token |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Users (`/v1/users`)
 
-## Stay in touch
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Authenticated | Paginated list (`?limit=20&offset=0`) |
+| GET | `/:id` | Authenticated | Get by ID |
+| POST | `/` | Manager only | Create user |
+| PATCH | `/:id` | Manager only | Update user |
+| DELETE | `/:id` | Manager only | Delete user |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Employees (`/v1/employees`)
 
-## License
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Authenticated | Paginated list (`?limit=20&offset=0`) |
+| GET | `/:id` | Authenticated | Get by ID |
+| POST | `/` | Manager only | Create employee |
+| PATCH | `/:id` | Manager only | Update employee |
+| DELETE | `/:id` | Manager only | Delete employee |
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+All list endpoints return:
+```json
+{
+  "success": true,
+  "data": [...],
+  "total": 100,
+  "hasNext": true
+}
+```
+
+## Redis Caching
+
+`RedisService` provides the ioredis client. `CacheService` provides structured caching with namespaced keys.
+
+### Cache Keys & TTLs
+
+| Key Pattern | TTL | Purpose |
+|---|---|---|
+| `auth:session:{token}` | 24h | Cached JWT payload for fast validation |
+| `auth:blacklist:{jti}` | 24h | Blacklisted token IDs (logout) |
+| `auth:ad_token:{sha256}` | 5m | Cached Graph API validation result |
+| `users:list` | 30m | Full user list (paginated from cache) |
+| `employees:list` | 30m | Full employee list (paginated from cache) |
+
+### Cache Invalidation
+
+- `users:list` is deleted on user create/update/delete
+- `employees:list` is deleted on employee create/update/delete
+
+### `getOrSet` Pattern
+
+```typescript
+const data = await this.cache.getOrSet('users:list', () =>
+  this.prisma.sec_users.findMany({ ... }),
+  1800,
+);
+```
+
+## DTO & Documentation Pattern
+
+DTOs are split into two files per domain:
+- `*.dto.ts` — Class definitions with `class-validator` decorators (validation)
+- `*.doc.ts` — Swagger decorators using `applyDecorators()` (documentation)
+
+```typescript
+// auth.doc.ts
+export function ApiLoginProperty() {
+  return applyDecorators(
+    ApiProperty({ example: 'john.doe', description: 'User login name' }),
+  );
+}
+
+// auth.dto.ts
+export class LoginDto {
+  @ApiLoginProperty()
+  @IsString()
+  @IsNotEmpty()
+  login!: string;
+}
+```
+
+## Prisma
+
+`PrismaService` extends `PrismaClient` with lifecycle hooks (`onModuleInit`/`onModuleDestroy`). Models use **snake_case** names matching the SQL Server schema (e.g., `sec_users`, `employee_master`, `user_tokens`).
+
+## Setup
+
+### Prerequisites
+
+- Node.js >= 20
+- NATS server running
+- SQL Server instance (Chronexa DB)
+- Redis server
+
+### Environment Variables (`.env`)
+
+```env
+DATABASE_URL="sqlserver://host;user=user;password=pass;database=Chronexa;TrustServerCertificate=true"
+REDIS_URL="redis://localhost:6379"
+natsUrl="nats://localhost:4222"
+accessTokenSecret="your-jwt-secret"
+PORT=3000
+TENANT_ID="azure-tenant-id"       # For AD login
+CLIENT_ID="azure-client-id"       # For AD login
+CLIENT_SECRET="azure-secret"      # For AD login
+```
+
+### Install & Run
+
+```bash
+# Install
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Build all services
+npx nest build gateway
+npx nest build auth-service
+npx nest build user-service
+
+# Run (separate terminals)
+npx nest start auth-service
+npx nest start user-service
+npx nest start gateway
+
+# API docs available at http://localhost:3000/docs
+```
+
+### NATS Message Patterns
+
+| Pattern | Source | Target |
+|---|---|---|
+| `auth.login` | Gateway | auth-service |
+| `auth.ad_login` | Gateway | auth-service |
+| `auth.logout` | Gateway | auth-service |
+| `auth.validate_token` | Gateway (AuthGuard) | auth-service |
+| `user.get_all` | Gateway | user-service |
+| `user.get_by_id` | Gateway | user-service |
+| `user.create` | Gateway | user-service |
+| `user.update` | Gateway | user-service |
+| `user.delete` | Gateway | user-service |
+| `employee.get_all` | Gateway | user-service |
+| `employee.get_by_id` | Gateway | user-service |
+| `employee.create` | Gateway | user-service |
+| `employee.update` | Gateway | user-service |
+| `employee.delete` | Gateway | user-service |

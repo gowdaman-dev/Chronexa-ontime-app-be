@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '@app/redis';
 import axios from 'axios';
 import * as crypto from 'crypto';
 
@@ -10,21 +11,47 @@ import * as crypto from 'crypto';
 export class AuthServiceService {
   private readonly logger = new Logger(AuthServiceService.name);
   private readonly pepper: string;
-  private readonly tenantId: string;
-  private readonly clientId: string;
-  private readonly clientSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly cache: CacheService,
   ) {
-    this.pepper =
-      this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
-    this.tenantId = process.env.TENANT_ID ?? '';
-    this.clientId = process.env.CLIENT_ID ?? '';
-    this.clientSecret = process.env.CLIENT_SECRET ?? '';
+    this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
+
+  hashPassword(password: string): string {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt + this.pepper, 10000, 64, 'sha512').toString('hex');
+    return `${salt}:${hash}`;
+  }
+
+  private verifyPassword(password: string, stored: string): boolean {
+    if (!stored.includes(':')) {
+      const a = Buffer.from(password);
+      const b = Buffer.from(stored);
+      if (a.length !== b.length) return false;
+      return crypto.timingSafeEqual(a, b);
+    }
+    const [salt, hash] = stored.split(':');
+    const computed = crypto
+      .pbkdf2Sync(password, salt + this.pepper, 10000, 64, 'sha512')
+      .toString('hex');
+    const a = Buffer.from(computed);
+    const b = Buffer.from(hash);
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  }
+
+  private getRole(managerFlag: boolean | null): string {
+    return managerFlag === true ? 'Manager' : 'Employee';
+  }
+
+  private getEmployeeType(employeeTypeId: number | null): string {
+    return employeeTypeId === 26 ? 'Technical' : 'Professional';
+  }
+
   private async getOrganizationByEmployeeId(employeeId: number) {
     try {
       const result: any = await this.prisma.$queryRaw`
@@ -63,49 +90,32 @@ export class AuthServiceService {
 
     const user = await this.prisma.sec_users.findFirst({
       where: { login },
-      include: {
-        employee_master: true,
-        sec_user_roles: { include: { sec_roles: true } },
-      },
+      include: { employee_master: true },
     });
 
     if (!user || !user.password) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'Invalid login or password',
-      });
+      throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
 
     if (isMobileClient && !user.access_mobile_app) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Access to mobile app is disabled. Please contact IT support.',
-      });
+      throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
     }
     if (!isMobileClient && !user.access_control_panel) {
-      throw new RpcException({
-        statusCode: 403,
-        message:
-          'Access to control panel is disabled. Please contact IT support.',
-      });
+      throw new RpcException({ statusCode: 403, message: 'Access to control panel is disabled. Please contact IT support.' });
     }
 
-    if (password !== user.password) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'Invalid login or password',
-      });
+    if (!this.verifyPassword(password, user.password)) {
+      throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
 
     const emp = user.employee_master;
     if (!emp) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'Employee record not found',
-      });
+      throw new RpcException({ statusCode: 401, message: 'Employee record not found' });
     }
 
-    const role = user.sec_user_roles[0]?.sec_roles?.role_name ?? 'Employee';
+    const role = this.getRole(emp.manager_flag);
+    const employeeType = this.getEmployeeType(emp.employee_type_id);
+
     const [orgDetails, lastTxn] = await Promise.all([
       this.getOrganizationByEmployeeId(emp.employee_id),
       this.getLastTransaction(emp.employee_id),
@@ -115,6 +125,7 @@ export class AuthServiceService {
       sub: emp.employee_id,
       userId: user.user_id,
       role,
+      employeeType,
       employeeId: emp.employee_id,
       login: user.login,
       isADUser: false,
@@ -140,11 +151,12 @@ export class AuthServiceService {
       await this.saveMobileAccessToken(emp.employee_id, accessToken);
     }
 
+    await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+
     return {
       accessToken,
       user: {
         userId: user.user_id,
-        roleId: user.sec_user_roles[0]?.sec_roles?.role_id,
         employeeName: {
           firsteng: emp.firstname_eng,
           lasteng: emp.lastname_eng,
@@ -152,6 +164,7 @@ export class AuthServiceService {
           lastarb: emp.lastname_arb,
         },
         role: role.toUpperCase(),
+        employeeType,
         employeeNumber: emp.employee_id,
         subjectId: emp.emp_no,
         email: emp.email,
@@ -164,22 +177,25 @@ export class AuthServiceService {
   }
 
   async adLogin(adToken: string, userAgent?: string) {
-    const empNo = await this.validateTokenWithGraphAPI(adToken);
+    const cacheKey = CACHE_KEYS.AD_TOKEN(crypto.createHash('sha256').update(adToken).digest('hex'));
+    let empNo = await this.cache.get<string>(cacheKey);
+    if (!empNo) {
+      empNo = await this.validateTokenWithGraphAPI(adToken);
+      if (empNo) {
+        await this.cache.set(cacheKey, empNo, CACHE_TTL.AD_TOKEN);
+      }
+    }
+
     if (!empNo) {
       throw new RpcException({ statusCode: 401, message: 'Invalid AD token' });
     }
 
     const ua = (userAgent ?? '').toLowerCase();
-    const isMobileClient =
-      ua.includes('dart/') || ua.includes('flutter') || ua.includes('okhttp');
+    const isMobileClient = ua.includes('dart/') || ua.includes('flutter') || ua.includes('okhttp');
 
     const empRecord: any = await this.prisma.employee_master.findFirst({
       where: { emp_no: empNo },
-      include: {
-        sec_users: {
-          include: { sec_user_roles: { include: { sec_roles: true } } },
-        },
-      },
+      include: { sec_users: true },
     });
 
     if (!empRecord) {
@@ -188,25 +204,21 @@ export class AuthServiceService {
 
     const secUser = empRecord.sec_users;
     if (!secUser) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'No user account linked to this employee',
-      });
+      throw new RpcException({ statusCode: 401, message: 'No user account linked to this employee' });
     }
 
     if (isMobileClient && !secUser.access_mobile_app) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Access to mobile app is disabled. Please contact IT support.',
-      });
+      throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
     }
 
-    const role = secUser.sec_user_roles[0]?.sec_roles?.role_name ?? 'Employee';
+    const role = this.getRole(empRecord.manager_flag);
+    const employeeType = this.getEmployeeType(empRecord.employee_type_id);
 
     const payload = {
       sub: empRecord.employee_id,
       userId: secUser.user_id,
       role,
+      employeeType,
       employeeId: empRecord.employee_id,
       login: secUser.login,
       isADUser: true,
@@ -227,6 +239,8 @@ export class AuthServiceService {
       await this.saveMobileAccessToken(empRecord.employee_id, accessToken);
     }
 
+    await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+
     const [orgDetails, lastTxn] = await Promise.all([
       this.getOrganizationByEmployeeId(empRecord.employee_id),
       this.getLastTransaction(empRecord.employee_id),
@@ -236,7 +250,6 @@ export class AuthServiceService {
       accessToken,
       user: {
         userId: secUser.user_id,
-        roleId: secUser.sec_user_roles[0]?.sec_roles?.role_id,
         employeeName: {
           firsteng: empRecord.firstname_eng,
           lasteng: empRecord.lastname_eng,
@@ -244,6 +257,7 @@ export class AuthServiceService {
           lastarb: empRecord.lastname_arb,
         },
         role: role.toUpperCase(),
+        employeeType,
         employeeNumber: empRecord.employee_id,
         subjectId: empRecord.emp_no,
         email: empRecord.email,
@@ -254,24 +268,46 @@ export class AuthServiceService {
       },
     };
   }
+
   async logout(refreshToken: string) {
     await this.prisma.user_tokens.deleteMany({
       where: { refresh_token: refreshToken },
     });
+
+    try {
+      const payload: any = this.jwtService.decode(refreshToken);
+      if (payload?.jti) {
+        await this.cache.set(CACHE_KEYS.AUTH_BLACKLIST(payload.jti), true, CACHE_TTL.BLACKLIST);
+      }
+    } catch {}
+
+    await this.cache.del(CACHE_KEYS.AUTH_SESSION(refreshToken));
+
     return { success: true, message: 'Logged out successfully' };
   }
 
   async validateToken(token: string) {
     try {
-      return this.jwtService.verify(token);
+      const payload: any = this.jwtService.decode(token);
+      if (payload?.jti) {
+        const blacklisted = await this.cache.exists(CACHE_KEYS.AUTH_BLACKLIST(payload.jti));
+        if (blacklisted) return null;
+      }
+
+      const cached = await this.cache.get(CACHE_KEYS.AUTH_SESSION(token));
+      if (cached) return cached;
+
+      const verified = this.jwtService.verify(token);
+      if (verified) {
+        await this.cache.set(CACHE_KEYS.AUTH_SESSION(token), verified, CACHE_TTL.AUTH_SESSION);
+      }
+      return verified;
     } catch {
       return null;
     }
   }
 
-  private async validateTokenWithGraphAPI(
-    token: string,
-  ): Promise<string | null> {
+  private async validateTokenWithGraphAPI(token: string): Promise<string | null> {
     try {
       const { data, status } = await axios.get(
         'https://graph.microsoft.com/v1.0/me?$select=employeeId',

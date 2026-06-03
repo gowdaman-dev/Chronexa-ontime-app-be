@@ -3,6 +3,7 @@ export interface AuthUser {
   login: string;
   employeeId: number;
   role: string;
+  employeeType: string;
   isADUser: boolean;
 }
 

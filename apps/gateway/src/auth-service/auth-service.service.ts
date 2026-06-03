@@ -31,6 +31,7 @@ export class AuthServiceService implements IAuthService {
         login: payload.login,
         employeeId: payload.employeeId ?? payload.sub,
         role: payload.role ?? 'Employee',
+        employeeType: payload.employeeType ?? 'Professional',
         isADUser: payload.isADUser ?? false,
       };
       return { valid: true, user };

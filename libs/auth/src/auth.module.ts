@@ -2,6 +2,7 @@ import { Module, DynamicModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './guards/auth.guard';
 import { RbacGuard } from './guards/rbac.guard';
+import { EmployeeTypeGuard } from './guards/employee-type.guard';
 import { AUTH_VALIDATOR } from './auth.constants';
 
 @Module({})
@@ -16,10 +17,12 @@ export class AuthModule {
         },
         AuthGuard,
         RbacGuard,
+        EmployeeTypeGuard,
         { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_GUARD, useClass: RbacGuard },
+        { provide: APP_GUARD, useClass: EmployeeTypeGuard },
       ],
-      exports: [AuthGuard, RbacGuard],
+      exports: [AuthGuard, RbacGuard, EmployeeTypeGuard],
     };
   }
 }
