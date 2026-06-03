@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Roles } from '@app/auth';
 import { UserServiceService } from './user-service.service';
 import { CreateUserDto, UpdateUserDto, PaginationQueryDto } from '@app/dto';
 import {
@@ -17,6 +18,7 @@ export class UserServiceController {
   constructor(private readonly userService: UserServiceService) {}
 
   @Post()
+  @Roles('Admin')
   @ApiCreateUserOperation()
   create(@Body() dto: CreateUserDto) {
     return this.userService.createUser(dto);
@@ -36,12 +38,14 @@ export class UserServiceController {
   }
 
   @Patch(':id')
+  @Roles('Admin')
   @ApiUpdateUserOperation()
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.userService.updateUser(+id, dto);
   }
 
   @Delete(':id')
+  @Roles('Admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiDeleteUserOperation()
   async delete(@Param('id') id: string) {
