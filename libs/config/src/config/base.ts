@@ -10,4 +10,7 @@ export default () => ({
   smtpSecure: process.env.SMTP_SECURE === 'true',
   smtpMaxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS ?? '', 10) || 5,
   smtpMaxMessages: parseInt(process.env.SMTP_MAX_MESSAGES ?? '', 10) || 100,
+  idsBaseUrl: process.env.IDS_BASE_URL,
+  idsUsername: process.env.IDS_USERNAME,
+  idsPassword: process.env.IDS_PASSWORD,
 });
