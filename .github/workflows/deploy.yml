@@ -1,0 +1,59 @@
+name: Deploy to Windows Server (PM2)
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows, ${{ inputs.environment || 'production' }}]
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Create .env
+        run: |
+          @"
+          ${{ secrets.ENV_FILE }}
+          "@ | Out-File -FilePath .env -Encoding utf8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build
+        run: npm run build
+
+      - name: Reload PM2 processes
+        run: |
+          pm2 startOrReload ecosystem.config.js --update-env
+        env:
+          PORT: ${{ secrets.PORT || '8122' }}
+
+      - name: Save PM2 process list
+        run: pm2 save
