@@ -22,27 +22,40 @@ export class SelfServiceGatewayService {
           const rpcBody =
             typeof err?.message === 'object' && err.message !== null
               ? err.message
-              : err?.response ?? err;
+              : (err?.response ?? err);
           const statusCode = rpcBody?.statusCode ?? err?.statusCode;
           if (statusCode) {
             return throwError(() => new HttpException(rpcBody, statusCode));
           }
-          return throwError(() => new HttpException('Service unavailable', HttpStatus.SERVICE_UNAVAILABLE));
+          console.error(`Error in RPC call to pattern "${pattern}":`, err);
+          return throwError(
+            () =>
+              new HttpException(
+                'Service unavailable',
+                HttpStatus.SERVICE_UNAVAILABLE,
+              ),
+          );
         }),
       ),
     );
   }
 
   getMyCheckInOut(employeeId: number) {
-    return this.send('self_service.mobile.transactions.my_check_in_out', { employeeId });
+    return this.send('self_service.mobile.transactions.my_check_in_out', {
+      employeeId,
+    });
   }
 
   getMyWorkLocation(employeeId: number) {
-    return this.send('self_service.mobile.location.my_work_location', { employeeId });
+    return this.send('self_service.mobile.location.my_work_location', {
+      employeeId,
+    });
   }
 
   getLastTransactions(employeeId: number) {
-    return this.send('self_service.mobile.transactions.last_transactions', { employeeId });
+    return this.send('self_service.mobile.transactions.last_transactions', {
+      employeeId,
+    });
   }
 
   verifyAssignedLocation(employeeId: number, dto: VerifyLocationDto) {
