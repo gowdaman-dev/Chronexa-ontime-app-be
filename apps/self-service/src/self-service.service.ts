@@ -13,7 +13,11 @@ export class SelfServiceService {
     private readonly config: ConfigService,
   ) {}
 
-  private fail(statusCode: number, message: string, extra?: Record<string, any>): never {
+  private fail(
+    statusCode: number,
+    message: string,
+    extra?: Record<string, any>,
+  ): never {
     throw new RpcException({ statusCode, message, ...extra });
   }
 
@@ -116,9 +120,16 @@ export class SelfServiceService {
       `${this.getIdsBaseUrl()}/authenticate`,
       { username, password },
     );
+    console.log('IDS Login Response:', response);
     const cookies = response.headers['set-cookie'];
-    const cookieList = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
-    const sessionCookie = cookieList.find((cookie) => cookie.startsWith('JSESSIONID='));
+    const cookieList = Array.isArray(cookies)
+      ? cookies
+      : cookies
+        ? [cookies]
+        : [];
+    const sessionCookie = cookieList.find((cookie) =>
+      cookie.startsWith('JSESSIONID='),
+    );
     const sessionId = sessionCookie?.split(';')[0]?.split('=')[1];
     if (response.status === 200 && sessionId) {
       return sessionId;
@@ -149,7 +160,7 @@ export class SelfServiceService {
   }
 
   private getAppTypeFromUserAgent(userAgent?: string | string[]): string {
-    const raw = Array.isArray(userAgent) ? userAgent[0] : userAgent ?? '';
+    const raw = Array.isArray(userAgent) ? userAgent[0] : (userAgent ?? '');
     return raw.split('dart/')[1] || 'fieldtrack';
   }
 
@@ -179,7 +190,9 @@ export class SelfServiceService {
       : payload.appVersion;
     const appType = this.getAppTypeFromUserAgent(payload.userAgent);
     const transactionTime = await this.getServerTime();
-    const transaction = await (this.prisma.employee_event_transactions.create as any)({
+    const transaction = await (
+      this.prisma.employee_event_transactions.create as any
+    )({
       data: {
         reason: payload.reason,
         created_id: createdId,
@@ -211,7 +224,10 @@ export class SelfServiceService {
     };
   }
 
-  private async runIdsVerification(payload: any, mode: 'identify' | 'verify-encounter') {
+  private async runIdsVerification(
+    payload: any,
+    mode: 'identify' | 'verify-encounter',
+  ) {
     const employeeId = Number(payload.employeeId);
     const body = payload.body ?? {};
     if (!employeeId || Number.isNaN(employeeId)) {
@@ -229,6 +245,7 @@ export class SelfServiceService {
 
     const imageBase64 = this.getFileBuffer(payload.file).toString('base64');
     const sessionId = await this.idsLogin();
+    console.log('Obtained IDS session ID:', sessionId);
     const notes = `${body.reason} , ${body.geolocation}`;
     const verificationPayload: Record<string, any> = {
       notes,
@@ -255,7 +272,9 @@ export class SelfServiceService {
     );
     const bestCandidate = verificationResponse.data?.bestCandidate;
     if (verificationResponse.status !== 200 || !bestCandidate?.subjectId) {
-      this.fail(400, 'Verification failed', { data: verificationResponse.data });
+      this.fail(400, 'Verification failed', {
+        data: verificationResponse.data,
+      });
     }
 
     const subjectResponse = await this.requestJson(
@@ -281,7 +300,9 @@ export class SelfServiceService {
   }
 
   private async getServerTime(): Promise<Date> {
-    const rows = await this.prisma.$queryRaw<{ time: Date }[]>`SELECT GETDATE() AS time;`;
+    const rows = await this.prisma.$queryRaw<
+      { time: Date }[]
+    >`SELECT GETDATE() AS time;`;
     return rows?.[0]?.time ?? new Date();
   }
 
@@ -291,13 +312,18 @@ export class SelfServiceService {
     }
   }
 
-  private assertCoordinates(coordinates: number[]): asserts coordinates is [number, number] {
+  private assertCoordinates(
+    coordinates: number[],
+  ): asserts coordinates is [number, number] {
     if (
       !Array.isArray(coordinates) ||
       coordinates.length !== 2 ||
       !coordinates.every((coordinate) => Number.isFinite(coordinate))
     ) {
-      this.fail(400, 'Invalid coordinates format. Expected an array of [latitude, longitude].');
+      this.fail(
+        400,
+        'Invalid coordinates format. Expected an array of [latitude, longitude].',
+      );
     }
   }
 
@@ -326,7 +352,10 @@ export class SelfServiceService {
 
   private isWithinAnyLocation(
     coordinates: [number, number],
-    locations: Array<{ radius?: number | string | null; geolocation?: string | null }>,
+    locations: Array<{
+      radius?: number | string | null;
+      geolocation?: string | null;
+    }>,
   ): boolean {
     const [targetLat, targetLon] = coordinates;
     const processed = locations
@@ -336,10 +365,19 @@ export class SelfServiceService {
         const latitude = Number.parseFloat(rawLat?.trim() ?? '');
         const longitude = Number.parseFloat(rawLon?.trim() ?? '');
         const radius = Number(location.radius ?? 0);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-        return { latitude, longitude, radius: Number.isFinite(radius) ? radius : 0 };
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
+          return null;
+        return {
+          latitude,
+          longitude,
+          radius: Number.isFinite(radius) ? radius : 0,
+        };
       })
-      .filter(Boolean) as Array<{ latitude: number; longitude: number; radius: number }>;
+      .filter(Boolean) as Array<{
+      latitude: number;
+      longitude: number;
+      radius: number;
+    }>;
 
     return processed.some((location) => {
       const distance = this.distanceInMeters(
@@ -389,7 +427,8 @@ export class SelfServiceService {
       });
     }
     if (employee.organization_id !== 27 || employee.employee_type_id !== 26) {
-      const message = 'Employee does not belong to the required organization or employee type';
+      const message =
+        'Employee does not belong to the required organization or employee type';
       this.fail(options.wrongGroupStatusCode ?? 403, message, {
         ...(options.includeErrorCodes
           ? { error: message, error_code: 'EMPLOYEE_NOT_IN_REQUIRED_GROUP' }
@@ -405,16 +444,18 @@ export class SelfServiceService {
     const lastDaysAgo = new Date(currentDate);
     lastDaysAgo.setDate(lastDaysAgo.getDate() - 4);
 
-    const transactions = await this.prisma.employee_event_transactions.findMany({
-      where: {
-        employee_id: employeeId,
-        transaction_time: {
-          gte: lastDaysAgo,
-          lte: currentDate,
+    const transactions = await this.prisma.employee_event_transactions.findMany(
+      {
+        where: {
+          employee_id: employeeId,
+          transaction_time: {
+            gte: lastDaysAgo,
+            lte: currentDate,
+          },
         },
+        orderBy: { transaction_id: 'desc' },
       },
-      orderBy: { transaction_id: 'desc' },
-    });
+    );
 
     return {
       message: 'Last transactions fetched successfully',
@@ -431,7 +472,9 @@ export class SelfServiceService {
     const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
     const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
     const yesterdayStart = new Date(Date.UTC(year, month, day - 1, 0, 0, 0, 0));
-    const yesterdayEnd = new Date(Date.UTC(year, month, day - 1, 23, 59, 59, 999));
+    const yesterdayEnd = new Date(
+      Date.UTC(year, month, day - 1, 23, 59, 59, 999),
+    );
 
     const [todayTransactions, yesterdayLastCheckIn] = await Promise.all([
       this.prisma.employee_event_transactions.findMany({
@@ -459,13 +502,18 @@ export class SelfServiceService {
 
     let checkIn: Date | null = null;
     let checkOut: Date | null = null;
-    const todayCheckIns = todayTransactions.filter((transaction) => transaction.reason === 'IN');
-    const todayCheckOuts = todayTransactions.filter((transaction) => transaction.reason === 'OUT');
+    const todayCheckIns = todayTransactions.filter(
+      (transaction) => transaction.reason === 'IN',
+    );
+    const todayCheckOuts = todayTransactions.filter(
+      (transaction) => transaction.reason === 'OUT',
+    );
 
     if (todayCheckIns.length > 0) {
       checkIn = todayCheckIns[0].transaction_time;
       const validCheckOuts = todayCheckOuts.filter(
-        (transaction) => transaction.transaction_time.getTime() > checkIn!.getTime(),
+        (transaction) =>
+          transaction.transaction_time.getTime() > checkIn!.getTime(),
       );
       checkOut = validCheckOuts.length
         ? validCheckOuts[validCheckOuts.length - 1].transaction_time
@@ -495,27 +543,28 @@ export class SelfServiceService {
       includeErrorCodes: true,
     });
     const serverTime = await this.getServerTime();
-    const workLocation = await this.prisma.local_SparkEmployeeLocationdetailsLocal.findFirst({
-      where: {
-        EmployeeNumber: employee.emp_no,
-        AND: [
-          {
-            OR: [{ FromDate: { lte: serverTime } }, { FromDate: null }],
-          },
-          {
-            OR: [{ ToDate: { gte: serverTime } }, { ToDate: null }],
-          },
-        ],
-      },
-      select: {
-        EmployeeNumber: true,
-        NameEng: true,
-        LocationCode: true,
-        LocationEng: true,
-        City: true,
-        Geolocation: true,
-      },
-    });
+    const workLocation =
+      await this.prisma.local_SparkEmployeeLocationdetailsLocal.findFirst({
+        where: {
+          EmployeeNumber: employee.emp_no,
+          AND: [
+            {
+              OR: [{ FromDate: { lte: serverTime } }, { FromDate: null }],
+            },
+            {
+              OR: [{ ToDate: { gte: serverTime } }, { ToDate: null }],
+            },
+          ],
+        },
+        select: {
+          EmployeeNumber: true,
+          NameEng: true,
+          LocationCode: true,
+          LocationEng: true,
+          City: true,
+          Geolocation: true,
+        },
+      });
 
     if (!workLocation) {
       this.fail(404, 'No work schedule assigned for today.');
@@ -544,7 +593,8 @@ export class SelfServiceService {
     }
     return {
       success: true,
-      message: 'Location verified successfully. You are within the allowed work location.',
+      message:
+        'Location verified successfully. You are within the allowed work location.',
     };
   }
 
@@ -576,7 +626,8 @@ export class SelfServiceService {
     }
     return {
       success: true,
-      message: 'Location verified successfully. You are within the allowed work location.',
+      message:
+        'Location verified successfully. You are within the allowed work location.',
     };
   }
 
