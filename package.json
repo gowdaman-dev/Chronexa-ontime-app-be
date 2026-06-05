@@ -17,7 +17,7 @@
     "start:gateway": "nest start gateway",
     "start:core": "concurrently \"npm run start:gateway -w\" \"npm run start:auth-service -w\" \"npm run start:user-service -w\"",
     "start:async": "concurrently \"npm run start:mail-service -w\"",
-    "start:all": "concurrently \"npm run start:gateway\" \"npm run start:auth-service\" \"npm run start:user-service\" \"npm run start:self-service\" \"npm run start:ontime-service\"",
+    "start:all": "concurrently \"npm run start:gateway\" \"npm run start:auth-service\" \"npm run start:user-service\" \"npm run start:self-service\"",
     "start:auth-service": "nest start auth-service",
     "start:user-service": "nest start user-service",
     "start:self-service": "nest start self-service",
