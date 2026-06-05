@@ -16,7 +16,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, windows, ${{ inputs.environment || 'production' }}]
+    runs-on: [self-hosted, windows]
 
     defaults:
       run:
