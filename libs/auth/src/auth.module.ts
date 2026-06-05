@@ -7,9 +7,10 @@ import { AUTH_VALIDATOR } from './auth.constants';
 
 @Module({})
 export class AuthModule {
-  static forRoot(validatorToken: any): DynamicModule {
+  static forRoot(validatorToken: any, imports: any[] = []): DynamicModule {
     return {
       module: AuthModule,
+      imports,
       providers: [
         {
           provide: AUTH_VALIDATOR,

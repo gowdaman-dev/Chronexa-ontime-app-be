@@ -17,9 +17,12 @@ export class AuditInterceptor implements NestInterceptor {
     const res = context.switchToHttp().getResponse();
 
     return next.handle().pipe(
-      tap(async () => {
-        await this.auditService.create({
-          employee_id: req.user?.employeeId ?? 'SYSTEM',
+      tap(() => {
+        void this.auditService.create({
+          employee_id:
+            req.user?.employeeId !== undefined
+              ? String(req.user.employeeId)
+              : 'SYSTEM',
 
           event_type: 'API_REQUEST',
 
@@ -38,6 +41,8 @@ export class AuditInterceptor implements NestInterceptor {
           is_success: res.statusCode < 400,
 
           app_version_no: req.headers['x-app-version'],
+        }).catch((error) => {
+          console.error('Audit log write failed:', error);
         });
       }),
     );
