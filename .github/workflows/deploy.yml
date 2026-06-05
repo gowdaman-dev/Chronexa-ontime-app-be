@@ -16,7 +16,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, windows]
+    runs-on: [self-hosted, Windows, production]
 
     defaults:
       run:
