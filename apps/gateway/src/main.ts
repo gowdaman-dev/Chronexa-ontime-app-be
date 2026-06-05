@@ -105,6 +105,10 @@ async function bootstrap() {
       },
       persistAuth: true,
       servers: [
+         {
+          url: `http://160.25.62.34:${process.env.PORT || 3000}`,
+          description: 'Local Development Server',
+        },
         {
           url: `http://localhost:${process.env.PORT || 3000}`,
           description: 'Local Development Server',

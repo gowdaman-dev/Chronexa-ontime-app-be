@@ -21,7 +21,7 @@ export class SelfServiceService {
     return (
       this.config.get<string>('idsBaseUrl') ??
       this.config.get<string>('IDS_BASE_URL') ??
-      'https://localhost:8443/api/v2.0'
+      '/api/v2.0'
     ).replace(/\/$/, '');
   }
 
