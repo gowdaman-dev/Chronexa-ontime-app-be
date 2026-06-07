@@ -1,4 +1,4 @@
-import { Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService, Optional } from '@nestjs/common';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as util from 'node:util';
@@ -11,6 +11,8 @@ type AppLoggerOptions = {
   writeToConsole?: boolean;
 };
 
+export const APP_LOGGER_OPTIONS = 'APP_LOGGER_OPTIONS';
+
 const SENSITIVE_KEY_PATTERN =
   /(password|passwd|pwd|secret|token|authorization|cookie|client_secret|database_url|databaseUrl|connectionString|accessToken|refreshToken|adToken|idsPassword|REDIS_URL|DATABASE_URL)/i;
 
@@ -20,7 +22,11 @@ export class AppLoggerService implements LoggerService {
   private readonly serviceName: string;
   private readonly writeToConsole: boolean;
 
-  constructor(options: AppLoggerOptions = {}) {
+  constructor(
+    @Optional()
+    @Inject(APP_LOGGER_OPTIONS)
+    options: AppLoggerOptions = {},
+  ) {
     this.logDir =
       options.logDir ?? process.env.LOG_DIR ?? path.join(process.cwd(), 'logs');
     this.serviceName =
