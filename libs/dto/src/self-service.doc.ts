@@ -114,4 +114,70 @@ export function ApiSimpleSelfServiceReadOperation(summary: string) {
   );
 }
 
+export function ApiLastTransactionsOperation() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get recent mobile employee transactions',
+      description:
+        'Returns the authenticated employee transactions from the last 4 days, ordered by latest transaction id first. The employee id is taken from the access token.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Recent employee transactions fetched successfully',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              message: {
+                type: 'string',
+                example: 'Last transactions fetched successfully',
+              },
+              data: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    transaction_id: { type: 'number', example: 12345 },
+                    employee_id: { type: 'number', example: 1001 },
+                    transaction_time: {
+                      type: 'string',
+                      format: 'date-time',
+                      example: '2026-05-02T10:00:00.000Z',
+                    },
+                    reason: { type: 'string', example: 'IN' },
+                    transaction_type: { type: 'string', example: 'IN' },
+                    geolocation: {
+                      type: 'string',
+                      example: '25.2048,55.2708',
+                    },
+                    remarks: { type: 'string', example: 'Check IN via mobile' },
+                  },
+                },
+              },
+            },
+          },
+          example: {
+            message: 'Last transactions fetched successfully',
+            data: [
+              {
+                transaction_id: 12345,
+                employee_id: 1001,
+                transaction_time: '2026-05-02T10:00:00.000Z',
+                reason: 'IN',
+                transaction_type: 'IN',
+                geolocation: '25.2048,55.2708',
+                remarks: 'Check IN via mobile',
+              },
+            ],
+          },
+        },
+      },
+    }),
+    ApiResponse({ status: 400, description: 'Invalid employee id in token context' }),
+    ApiResponse({ status: 401, description: 'Missing or invalid access token' }),
+    ApiResponse({ status: 500, description: 'Unexpected backend error' }),
+  );
+}
+
 export type SelfServiceMultipartDto = IdsPunchDto | IdsVerifyEncounterDto;
