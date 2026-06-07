@@ -1,8 +1,12 @@
+import { RpcException } from '@nestjs/microservices';
+
 const { MobileTransactionsService } = require('./transactions.service');
 
 describe('MobileTransactionsService', () => {
   const fixedNow = new Date('2026-05-02T10:00:00.000Z');
   let prisma: any;
+  let common: any;
+  let logger: any;
   let service: any;
 
   beforeEach(() => {
@@ -12,11 +16,18 @@ describe('MobileTransactionsService', () => {
         findFirst: jest.fn(),
       },
     };
-    const common = {
+    common = {
       assertEmployeeId: jest.fn(),
       getServerTime: jest.fn().mockResolvedValue(fixedNow),
+      fail: jest.fn((statusCode: number, message: string) => {
+        throw { statusCode, message };
+      }),
     };
-    service = new MobileTransactionsService(prisma, common);
+    logger = {
+      info: jest.fn(),
+      error: jest.fn(),
+    };
+    service = new MobileTransactionsService(prisma, common, logger);
   });
 
   it('returns recent transactions for an employee', async () => {
@@ -34,6 +45,47 @@ describe('MobileTransactionsService', () => {
         orderBy: { transaction_id: 'desc' },
       }),
     );
+    expect(logger.info).toHaveBeenCalledWith(
+      'Last transactions fetched successfully',
+      expect.objectContaining({
+        employeeId: 123,
+        count: 2,
+        from: expect.any(String),
+        to: fixedNow.toISOString(),
+      }),
+    );
+  });
+
+  it('logs and throws a backend error when last transactions query fails', async () => {
+    const error = new Error('database failed');
+    prisma.employee_event_transactions.findMany.mockRejectedValue(error);
+
+    await expect(service.getLastTransactions(123)).rejects.toEqual({
+      statusCode: 500,
+      message: 'Internal server error',
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to fetch last transactions',
+      error,
+      expect.objectContaining({ employeeId: 123 }),
+    );
+  });
+
+  it('preserves shared validation errors for invalid employee ids', async () => {
+    common.assertEmployeeId.mockImplementationOnce(() => {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid employee ID',
+      });
+    });
+
+    await expect(service.getLastTransactions(Number.NaN)).rejects.toBeInstanceOf(
+      RpcException,
+    );
+
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(common.fail).not.toHaveBeenCalledWith(500, expect.any(String));
   });
 
   it('returns first IN and latest valid OUT for today', async () => {

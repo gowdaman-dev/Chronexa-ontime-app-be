@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from '@app/prisma';
+import { AppLoggerService } from '@app/common';
 
 const { MobileCommonService } = require('../shared/mobile-common.service');
 
@@ -8,31 +10,48 @@ export class MobileTransactionsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(MobileCommonService) private readonly common: any,
+    private readonly logger: AppLoggerService,
   ) {}
 
   async getLastTransactions(employeeId: number) {
-    this.common.assertEmployeeId(employeeId);
-    const currentDate = await this.common.getServerTime();
-    const lastDaysAgo = new Date(currentDate);
-    lastDaysAgo.setDate(lastDaysAgo.getDate() - 4);
+    try {
+      this.common.assertEmployeeId(employeeId);
+      const currentDate = await this.common.getServerTime();
+      const lastDaysAgo = new Date(currentDate);
+      lastDaysAgo.setDate(lastDaysAgo.getDate() - 4);
 
-    const transactions = await this.prisma.employee_event_transactions.findMany(
-      {
-        where: {
-          employee_id: employeeId,
-          transaction_time: {
-            gte: lastDaysAgo,
-            lte: currentDate,
+      const transactions =
+        await this.prisma.employee_event_transactions.findMany({
+          where: {
+            employee_id: employeeId,
+            transaction_time: {
+              gte: lastDaysAgo,
+              lte: currentDate,
+            },
           },
-        },
-        orderBy: { transaction_id: 'desc' },
-      },
-    );
+          orderBy: { transaction_id: 'desc' },
+        });
 
-    return {
-      message: 'Last transactions fetched successfully',
-      data: transactions,
-    };
+      this.logger.info('Last transactions fetched successfully', {
+        employeeId,
+        count: transactions.length,
+        from: lastDaysAgo.toISOString(),
+        to: currentDate.toISOString(),
+      });
+
+      return {
+        message: 'Last transactions fetched successfully',
+        data: transactions,
+      };
+    } catch (error) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+      this.logger.error('Failed to fetch last transactions', error, {
+        employeeId,
+      });
+      return this.common.fail(500, 'Internal server error');
+    }
   }
 
   async getMyCheckInOut(employeeId: number) {

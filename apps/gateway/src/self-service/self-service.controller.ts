@@ -18,6 +18,7 @@ import {
 import {
   ApiIdsPunchOperation,
   ApiIdsVerifyEncounterOperation,
+  ApiLastTransactionsOperation,
   ApiSimpleSelfServiceReadOperation,
   ApiVerifyLocationOperation,
 } from '@app/dto/self-service.doc';
@@ -53,7 +54,7 @@ export class SelfServiceController {
   }
 
   @Get('mobile/transactions/last-transactions')
-  @ApiSimpleSelfServiceReadOperation('Get recent mobile employee transactions')
+  @ApiLastTransactionsOperation()
   getLastTransactions(@CurrentUser() user: AuthUser) {
     return this.selfService.getLastTransactions(user.employeeId);
   }
