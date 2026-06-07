@@ -3,20 +3,25 @@ import {
   Catch,
   ArgumentsHost,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { EmptyResponseException } from '@nestjs/microservices/errors/empty-response.exception';
+import { AppLoggerService } from '@app/common';
 
 @Catch(EmptyResponseException)
 export class RpcExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(RpcExceptionFilter.name);
+  constructor(private readonly logger?: AppLoggerService) {}
 
   catch(exception: EmptyResponseException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<any>();
     const request = ctx.getRequest<any>();
 
-    this.logger.error(`RPC Error [${request.method} ${request.url}]: ${exception.message}`);
+    this.logger?.error('RPC service unavailable', exception, {
+      method: request.method,
+      url: request.url,
+      userId: request.user?.userId,
+      employeeId: request.user?.employeeId,
+    });
 
     response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
       statusCode: HttpStatus.SERVICE_UNAVAILABLE,
