@@ -11,6 +11,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import compression from 'compression';
 import helmet from 'helmet';
+import { AppLoggerService } from '@app/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
@@ -72,7 +73,8 @@ async function bootstrap() {
     }),
   );
   app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalFilters(new RpcExceptionFilter());
+  const appLogger = app.get(AppLoggerService);
+  app.useGlobalFilters(new RpcExceptionFilter(appLogger));
 
   app.use(
     '/docs',

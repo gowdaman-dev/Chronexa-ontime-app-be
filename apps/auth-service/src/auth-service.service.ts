@@ -1,15 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '@app/redis';
+import { AppLoggerService } from '@app/common';
 import axios from 'axios';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthServiceService {
-  private readonly logger = new Logger(AuthServiceService.name);
   private readonly pepper: string;
 
   constructor(
@@ -17,6 +17,7 @@ export class AuthServiceService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly cache: CacheService,
+    private readonly logger: AppLoggerService,
   ) {
     this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
@@ -67,7 +68,7 @@ export class AuthServiceService {
         };
       }
     } catch (err) {
-      this.logger.error('Get organization error:', err);
+      this.logger.error('Get organization error', err, { employeeId });
     }
     return null;
   }
@@ -87,6 +88,11 @@ export class AuthServiceService {
   async login(login: string, password: string, userAgent?: string) {
     const ua = (userAgent ?? '').toLowerCase();
     const isMobileClient = ua.includes('dart/');
+    this.logger.info('Login attempt received', {
+      login,
+      isMobileClient,
+      userAgent,
+    });
 
     const user = await this.prisma.sec_users.findFirst({
       where: { login },
@@ -94,22 +100,43 @@ export class AuthServiceService {
     });
 
     if (!user || !user.password) {
+      this.logger.warn('Login rejected: invalid credentials', {
+        login,
+        isMobileClient,
+      });
       throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
 
     if (isMobileClient && !user.access_mobile_app) {
+      this.logger.warn('Login rejected: mobile access disabled', {
+        login,
+        employeeId: user.employee_id,
+      });
       throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
     }
     if (!isMobileClient && !user.access_control_panel) {
+      this.logger.warn('Login rejected: control panel access disabled', {
+        login,
+        employeeId: user.employee_id,
+      });
       throw new RpcException({ statusCode: 403, message: 'Access to control panel is disabled. Please contact IT support.' });
     }
 
     if (!this.verifyPassword(password, user.password)) {
+      this.logger.warn('Login rejected: invalid credentials', {
+        login,
+        employeeId: user.employee_id,
+        isMobileClient,
+      });
       throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
 
     const emp = user.employee_master;
     if (!emp) {
+      this.logger.warn('Login rejected: employee record missing', {
+        login,
+        userId: user.user_id,
+      });
       throw new RpcException({ statusCode: 401, message: 'Employee record not found' });
     }
 
@@ -152,6 +179,12 @@ export class AuthServiceService {
     }
 
     await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+    this.logger.info('Login succeeded', {
+      login: user.login,
+      employeeId: emp.employee_id,
+      userId: user.user_id,
+      isMobileClient,
+    });
 
     return {
       accessToken,
@@ -177,6 +210,7 @@ export class AuthServiceService {
   }
 
   async adLogin(adToken: string, userAgent?: string) {
+    this.logger.info('AD login attempt received', { userAgent });
     const cacheKey = CACHE_KEYS.AD_TOKEN(crypto.createHash('sha256').update(adToken).digest('hex'));
     let empNo = await this.cache.get<string>(cacheKey);
     if (!empNo) {
@@ -187,6 +221,7 @@ export class AuthServiceService {
     }
 
     if (!empNo) {
+      this.logger.warn('AD login rejected: invalid AD token');
       throw new RpcException({ statusCode: 401, message: 'Invalid AD token' });
     }
 
@@ -199,15 +234,22 @@ export class AuthServiceService {
     });
 
     if (!empRecord) {
+      this.logger.warn('AD login rejected: user not found', { empNo });
       throw new RpcException({ statusCode: 404, message: 'User not found' });
     }
 
     const secUser = empRecord.sec_users;
     if (!secUser) {
+      this.logger.warn('AD login rejected: no linked user account', {
+        employeeId: empRecord.employee_id,
+      });
       throw new RpcException({ statusCode: 401, message: 'No user account linked to this employee' });
     }
 
     if (isMobileClient && !secUser.access_mobile_app) {
+      this.logger.warn('AD login rejected: mobile access disabled', {
+        employeeId: empRecord.employee_id,
+      });
       throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
     }
 
@@ -240,6 +282,11 @@ export class AuthServiceService {
     }
 
     await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+    this.logger.info('AD login succeeded', {
+      login: secUser.login,
+      employeeId: empRecord.employee_id,
+      isMobileClient,
+    });
 
     const [orgDetails, lastTxn] = await Promise.all([
       this.getOrganizationByEmployeeId(empRecord.employee_id),
@@ -314,11 +361,13 @@ export class AuthServiceService {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (status === 200) {
-        this.logger.debug('Graph API User:', data);
+        this.logger.debug('Graph API user resolved', {
+          employeeId: data.employeeId,
+        });
         return data.employeeId;
       }
     } catch (err: any) {
-      this.logger.error('Graph API Error:', err?.message);
+      this.logger.error('Graph API token validation failed', err);
     }
     return null;
   }

@@ -1,33 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
-import { AppLoggerService } from '@app/common';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as https from 'node:https';
 
+const { MobileCommonService } = require('../shared/mobile-common.service');
+
 @Injectable()
-export class SelfServiceService {
+export class MobileIdsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly logger: AppLoggerService,
+    @Inject(MobileCommonService) private readonly common: any,
   ) {}
-
-  private fail(
-    statusCode: number,
-    message: string,
-    extra?: Record<string, any>,
-  ): never {
-    const meta = { statusCode, ...extra };
-    if (statusCode >= 500) {
-      this.logger.error('Self-service error', { message, ...meta });
-    } else {
-      this.logger.warn('Self-service request rejected', { message, ...meta });
-    }
-    throw new RpcException({ statusCode, message, ...extra });
-  }
 
   private getIdsBaseUrl(): string {
     return (
@@ -120,7 +106,7 @@ export class SelfServiceService {
   private async idsLogin(): Promise<string> {
     const { username, password } = this.getIdsCredentials();
     if (!username || !password) {
-      this.fail(500, 'IDS credentials are not configured');
+      return this.common.fail(500, 'IDS credentials are not configured');
     }
 
     const response = await this.requestJson(
@@ -138,19 +124,15 @@ export class SelfServiceService {
       cookie.startsWith('JSESSIONID='),
     );
     const sessionId = sessionCookie?.split(';')[0]?.split('=')[1];
-    this.logger.debug('IDS login completed', {
-      status: response.status,
-      hasSession: Boolean(sessionId),
-    });
     if (response.status === 200 && sessionId) {
       return sessionId;
     }
-    this.fail(502, 'IDS login failed');
+    return this.common.fail(502, 'IDS login failed');
   }
 
   private getFileBuffer(file: any): Buffer {
     if (!file) {
-      this.fail(400, 'Image file is required');
+      return this.common.fail(400, 'Image file is required');
     }
     if (typeof file.bufferBase64 === 'string') {
       return Buffer.from(file.bufferBase64, 'base64');
@@ -167,7 +149,7 @@ export class SelfServiceService {
     if (file.path && fs.existsSync(file.path)) {
       return fs.readFileSync(file.path);
     }
-    this.fail(400, 'Image file is required');
+    return this.common.fail(400, 'Image file is required');
   }
 
   private getAppTypeFromUserAgent(userAgent?: string | string[]): string {
@@ -186,21 +168,24 @@ export class SelfServiceService {
   }) {
     const createdId = Number(payload.employeeId);
     if (!createdId || Number.isNaN(createdId)) {
-      this.fail(400, 'created_id is required and must be a valid number');
+      this.common.fail(400, 'created_id is required and must be a valid number');
     }
 
     const employee = await this.prisma.employee_master.findUnique({
       where: { emp_no: payload.subjectEmpNo },
     });
     if (!employee) {
-      this.fail(400, 'Employee not found for the identified subject');
+      return this.common.fail(
+        400,
+        'Employee not found for the identified subject',
+      );
     }
 
     const appVersion = Array.isArray(payload.appVersion)
       ? payload.appVersion[0]
       : payload.appVersion;
     const appType = this.getAppTypeFromUserAgent(payload.userAgent);
-    const transactionTime = await this.getServerTime();
+    const transactionTime = await this.common.getServerTime();
     const transaction = await (
       this.prisma.employee_event_transactions.create as any
     )({
@@ -235,35 +220,27 @@ export class SelfServiceService {
     };
   }
 
-  private async runIdsVerification(
-    payload: any,
-    mode: 'identify' | 'verify-encounter',
-  ) {
+  async verifyEncounter(payload: any) {
     const employeeId = Number(payload.employeeId);
     const body = payload.body ?? {};
     if (!employeeId || Number.isNaN(employeeId)) {
-      this.fail(400, 'created_id is required and must be a valid number');
+      this.common.fail(400, 'created_id is required and must be a valid number');
     }
-    if (mode === 'verify-encounter' && !body.subjectId) {
-      this.fail(400, 'subjectId is required');
+    if (!body.subjectId) {
+      this.common.fail(400, 'subjectId is required');
     }
     if (!body.reason) {
-      this.fail(400, 'reason is required');
+      this.common.fail(400, 'reason is required');
     }
     if (!body.geolocation) {
-      this.fail(400, 'geolocation is required');
+      this.common.fail(400, 'geolocation is required');
     }
 
     const imageBase64 = this.getFileBuffer(payload.file).toString('base64');
     const sessionId = await this.idsLogin();
-    this.logger.info('IDS verification started', {
-      mode,
-      employeeId,
-      hasSession: Boolean(sessionId),
-    });
-    const notes = `${body.reason} , ${body.geolocation}`;
-    const verificationPayload: Record<string, any> = {
-      notes,
+    const verificationPayload = {
+      notes: `${body.reason} , ${body.geolocation}`,
+      subjectId: body.subjectId,
       samples: [
         {
           contentType: 'image/jpeg',
@@ -275,19 +252,16 @@ export class SelfServiceService {
         },
       ],
     };
-    if (mode === 'verify-encounter') {
-      verificationPayload.subjectId = body.subjectId;
-    }
 
     const verificationResponse = await this.requestJson(
       'POST',
-      `${this.getIdsBaseUrl()}/${mode}?liveness=true`,
+      `${this.getIdsBaseUrl()}/verify-encounter?liveness=true`,
       verificationPayload,
       { Cookie: `JSESSIONID=${sessionId}` },
     );
     const bestCandidate = verificationResponse.data?.bestCandidate;
     if (verificationResponse.status !== 200 || !bestCandidate?.subjectId) {
-      this.fail(400, 'Verification failed', {
+      this.common.fail(400, 'Verification failed', {
         data: verificationResponse.data,
       });
     }
@@ -300,7 +274,7 @@ export class SelfServiceService {
     );
     const subjectEmpNo = subjectResponse.data?.subjectId;
     if (!subjectEmpNo) {
-      this.fail(400, 'Verification failed', { data: subjectResponse.data });
+      this.common.fail(400, 'Verification failed', { data: subjectResponse.data });
     }
 
     return this.createIdsTransaction({
@@ -312,16 +286,5 @@ export class SelfServiceService {
       appVersion: payload.appVersion,
       userAgent: payload.userAgent,
     });
-  }
-
-  private async getServerTime(): Promise<Date> {
-    const rows = await this.prisma.$queryRaw<
-      { time: Date }[]
-    >`SELECT GETDATE() AS time;`;
-    return rows?.[0]?.time ?? new Date();
-  }
-
-  async punch(payload: any) {
-    return this.runIdsVerification(payload, 'identify');
   }
 }

@@ -1,13 +1,17 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import Redis, { Redis as RedisClient } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
+import { AppLoggerService } from '@app/common';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly client: RedisClient;
   private readonly defaultTTL: number = 3600;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: AppLoggerService,
+  ) {
     const redisUrl = this.configService.getOrThrow<string>('REDIS_URL');
 
     this.client = new Redis(redisUrl, {
@@ -21,15 +25,25 @@ export class RedisService implements OnModuleDestroy {
     });
 
     this.client.on('connect', () => {
-      console.log('Redis connected successfully');
+      this.logger.info('Redis connected successfully');
     });
 
     this.client.on('error', (err) => {
-      console.error('Redis connection error:', err);
+      this.logger.error('Redis connection error', err);
     });
 
     this.client.on('ready', () => {
-      console.log('Redis is ready');
+      this.logger.info('Redis is ready');
+    });
+  }
+
+  private keyNamespace(key: string): string {
+    return key.split(':')[0] || 'unknown';
+  }
+
+  private logRedisError(operation: string, error: unknown, key?: string) {
+    this.logger.error(`Redis ${operation} failed`, error, {
+      ...(key ? { keyNamespace: this.keyNamespace(key) } : {}),
     });
   }
 
@@ -43,7 +57,7 @@ export class RedisService implements OnModuleDestroy {
       if (!value) return null;
       return JSON.parse(value) as T;
     } catch (error) {
-      console.error(`Error getting key ${key}:`, error);
+      this.logRedisError('get', error, key);
       return null;
     }
   }
@@ -54,7 +68,7 @@ export class RedisService implements OnModuleDestroy {
       const ttlSeconds = ttl || this.defaultTTL;
       await this.client.setex(key, ttlSeconds, serialized);
     } catch (error) {
-      console.error(`Error setting key ${key}:`, error);
+      this.logRedisError('set', error, key);
     }
   }
   async del(key: string | string[]): Promise<void> {
@@ -65,7 +79,7 @@ export class RedisService implements OnModuleDestroy {
         await this.client.del(key);
       }
     } catch (error) {
-      console.error(`Error deleting key:`, error);
+      this.logRedisError('delete', error, Array.isArray(key) ? key[0] : key);
     }
   }
   async delPattern(pattern: string): Promise<void> {
@@ -75,7 +89,7 @@ export class RedisService implements OnModuleDestroy {
         await this.client.del(...keys);
       }
     } catch (error) {
-      console.error(`Error deleting pattern ${pattern}:`, error);
+      this.logRedisError('delete-pattern', error, pattern);
     }
   }
 
@@ -84,7 +98,7 @@ export class RedisService implements OnModuleDestroy {
       const result = await this.client.exists(key);
       return result === 1;
     } catch (error) {
-      console.error(`Error checking existence of key ${key}:`, error);
+      this.logRedisError('exists', error, key);
       return false;
     }
   }
@@ -93,7 +107,7 @@ export class RedisService implements OnModuleDestroy {
     try {
       return await this.client.ttl(key);
     } catch (error) {
-      console.error(`Error getting TTL for key ${key}:`, error);
+      this.logRedisError('ttl', error, key);
       return -1;
     }
   }
@@ -102,7 +116,7 @@ export class RedisService implements OnModuleDestroy {
     try {
       await this.client.expire(key, seconds);
     } catch (error) {
-      console.error(`Error setting expiry for key ${key}:`, error);
+      this.logRedisError('expire', error, key);
     }
   }
 
@@ -110,7 +124,7 @@ export class RedisService implements OnModuleDestroy {
     try {
       return await this.client.incr(key);
     } catch (error) {
-      console.error(`Error incrementing key ${key}:`, error);
+      this.logRedisError('increment', error, key);
       return 0;
     }
   }
@@ -119,7 +133,7 @@ export class RedisService implements OnModuleDestroy {
     try {
       return await this.client.decr(key);
     } catch (error) {
-      console.error(`Error decrementing key ${key}:`, error);
+      this.logRedisError('decrement', error, key);
       return 0;
     }
   }
@@ -129,7 +143,7 @@ export class RedisService implements OnModuleDestroy {
       const serialized = JSON.stringify(value);
       await this.client.hset(key, field, serialized);
     } catch (error) {
-      console.error(`Error setting hash field ${key}.${field}:`, error);
+      this.logRedisError('hash-set', error, key);
     }
   }
 
@@ -139,7 +153,7 @@ export class RedisService implements OnModuleDestroy {
       if (!value) return null;
       return JSON.parse(value) as T;
     } catch (error) {
-      console.error(`Error getting hash field ${key}.${field}:`, error);
+      this.logRedisError('hash-get', error, key);
       return null;
     }
   }
@@ -153,7 +167,7 @@ export class RedisService implements OnModuleDestroy {
       }
       return result;
     } catch (error) {
-      console.error(`Error getting all hash fields for ${key}:`, error);
+      this.logRedisError('hash-get-all', error, key);
       return {};
     }
   }
@@ -161,7 +175,7 @@ export class RedisService implements OnModuleDestroy {
     try {
       await this.client.flushall();
     } catch (error) {
-      console.error('Error flushing Redis:', error);
+      this.logRedisError('flush-all', error);
     }
   }
 
