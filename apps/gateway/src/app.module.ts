@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuditInterceptor, AuditModule } from '@app/common';
+import { AuditInterceptor, AuditModule, LoggingModule } from '@app/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from '@app/auth';
 import { ConfigModule } from '@app/config';
@@ -12,6 +12,7 @@ import { SelfServiceModule } from './self-service/self-service.module';
 @Module({
   imports: [
     ConfigModule,
+    LoggingModule,
     AuditModule,
     AuthServiceModule,
     AuthModule.forRoot(AuthServiceService, [AuthServiceModule]),

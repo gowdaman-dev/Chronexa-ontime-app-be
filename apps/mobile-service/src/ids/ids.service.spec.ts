@@ -1,15 +1,14 @@
-import { SelfServiceService } from './self-service.service';
+const { MobileIdsService } = require('./ids.service');
 
-describe('SelfServiceService IDS punch', () => {
+describe('MobileIdsService', () => {
   const fixedNow = new Date('2026-05-02T10:00:00.000Z');
   let prisma: any;
   let config: any;
-  let logger: any;
-  let service: SelfServiceService;
+  let common: any;
+  let service: any;
 
   beforeEach(() => {
     prisma = {
-      $queryRaw: jest.fn().mockResolvedValue([{ time: fixedNow }]),
       employee_event_transactions: {
         create: jest.fn(),
       },
@@ -19,7 +18,6 @@ describe('SelfServiceService IDS punch', () => {
     };
     config = {
       get: jest.fn(),
-      getOrThrow: jest.fn(),
     };
     config.get.mockImplementation((key: string, defaultValue?: string) => {
       const values: Record<string, string> = {
@@ -29,16 +27,16 @@ describe('SelfServiceService IDS punch', () => {
       };
       return values[key] ?? defaultValue;
     });
-    logger = {
-      debug: jest.fn(),
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
+    common = {
+      fail: jest.fn((statusCode: number, message: string, extra?: any) => {
+        throw { statusCode, message, ...extra };
+      }),
+      getServerTime: jest.fn().mockResolvedValue(fixedNow),
     };
-    service = new SelfServiceService(prisma, config, logger);
+    service = new MobileIdsService(prisma, config, common);
   });
 
-  it('creates an employee transaction after IDS 1:N identification succeeds', async () => {
+  it('uses IDS verify-encounter for 1:1 verification', async () => {
     const requestJson = jest
       .spyOn(service as any, 'requestJson')
       .mockResolvedValueOnce({
@@ -60,41 +58,27 @@ describe('SelfServiceService IDS punch', () => {
       firstname_arb: 'جون',
     });
     prisma.employee_event_transactions.create.mockResolvedValue({
-      transaction_id: 99,
+      transaction_id: 100,
       employee_id: 456,
-      reason: 'IN',
+      reason: 'OUT',
       transaction_time: fixedNow,
     });
 
-    await expect(
-      service.punch({
-        employeeId: 123,
-        file: { buffer: Buffer.from('image') },
-        body: { reason: 'IN', geolocation: '25.2048,55.2708' },
-        userAgent: 'dart/',
-        appVersion: '1.0.0',
-      }),
-    ).resolves.toEqual({
-      success: true,
-      message: 'Verification successful',
-      subject: expect.objectContaining({
-        transaction_id: 99,
-        name_eng: 'John',
-        name_arb: 'جون',
-      }),
+    await service.verifyEncounter({
+      employeeId: 123,
+      file: { buffer: Buffer.from('image') },
+      body: {
+        reason: 'OUT',
+        subjectId: 'EMP001',
+        geolocation: '25.2048,55.2708',
+      },
     });
 
     expect(requestJson).toHaveBeenNthCalledWith(
       2,
       'POST',
-      'https://ids.local/api/v2.0/identify?liveness=true',
-      expect.objectContaining({
-        samples: [
-          expect.objectContaining({
-            data: Buffer.from('image').toString('base64'),
-          }),
-        ],
-      }),
+      'https://ids.local/api/v2.0/verify-encounter?liveness=true',
+      expect.objectContaining({ subjectId: 'EMP001' }),
       expect.any(Object),
     );
   });
