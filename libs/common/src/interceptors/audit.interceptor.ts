@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { AuditService } from '../services/audit.service';
+import { AppLoggerService } from '../services/app-logger.service';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly logger: AppLoggerService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -42,7 +46,11 @@ export class AuditInterceptor implements NestInterceptor {
 
           app_version_no: req.headers['x-app-version'],
         }).catch((error) => {
-          console.error('Audit log write failed:', error);
+          this.logger.error('Audit log write failed', error, {
+            endpoint: req.originalUrl,
+            method: req.method,
+            employeeId: req.user?.employeeId,
+          });
         });
       }),
     );
