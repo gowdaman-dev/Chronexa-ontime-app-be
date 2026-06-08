@@ -1,0 +1,76 @@
+import { Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
+import { AppLoggerService } from '@app/common';
+
+@Injectable()
+export class WorkflowCommonService {
+  constructor(private readonly logger: AppLoggerService) {}
+
+  fail(statusCode: number, message: string, extra?: Record<string, any>): never {
+    const meta = { statusCode, ...extra };
+    if (statusCode >= 500) {
+      this.logger.error('Self-service workflow error', { message, ...meta });
+    } else {
+      this.logger.warn('Self-service workflow request rejected', {
+        message,
+        ...meta,
+      });
+    }
+    throw new RpcException({ statusCode, message, ...extra });
+  }
+
+  toNumber(value: any): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  toBoolean(value: any): boolean | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value === 'true' || value === '1';
+    return Boolean(value);
+  }
+
+  parsePagination(query: Record<string, any> = {}) {
+    const limit = Math.max(1, this.toNumber(query.limit) ?? 10);
+    const offset = Math.max(1, this.toNumber(query.offset) ?? 1);
+    return { limit, offset, skip: (offset - 1) * limit, take: limit };
+  }
+
+  parseDate(value: any): Date | undefined {
+    if (!value) return undefined;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  parseDateRange(start?: string, end?: string) {
+    const isDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const startDate = start
+      ? this.parseDate(isDateOnly(start) ? `${start}T00:00:00` : start)
+      : undefined;
+    const endDate = end
+      ? this.parseDate(isDateOnly(end) ? `${end}T23:59:59.999` : end)
+      : undefined;
+    return { startDate, endDate };
+  }
+
+  dateFilter(start?: string, end?: string) {
+    const { startDate, endDate } = this.parseDateRange(start, end);
+    if (startDate && endDate) return { gte: startDate, lte: endDate };
+    if (startDate) return { gte: startDate };
+    if (endDate) return { lte: endDate };
+    return undefined;
+  }
+
+  compact<T extends Record<string, any>>(value: T): T {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, item]) => item !== undefined),
+    ) as T;
+  }
+
+  uploadPath(file: any, prefix = '/uploads') {
+    const filename = file?.filename ?? file?.originalname;
+    return filename ? `${prefix}/${filename}` : undefined;
+  }
+}
