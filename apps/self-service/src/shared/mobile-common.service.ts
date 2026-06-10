@@ -13,9 +13,12 @@ export class MobileCommonService {
   fail(statusCode: number, message: string, extra?: Record<string, any>): never {
     const meta = { statusCode, ...extra };
     if (statusCode >= 500) {
-      this.logger.error('Mobile service error', { message, ...meta });
+      this.logger.error('Mobile self-service error', { message, ...meta });
     } else {
-      this.logger.warn('Mobile service request rejected', { message, ...meta });
+      this.logger.warn('Mobile self-service request rejected', {
+        message,
+        ...meta,
+      });
     }
     throw new RpcException({ statusCode, message, ...extra });
   }
