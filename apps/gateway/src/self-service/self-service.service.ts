@@ -16,7 +16,6 @@ type IdsGatewayPayload = {
 export class SelfServiceGatewayService {
   constructor(
     @Inject('SELF_SERVICE') private readonly selfServiceClient: ClientProxy,
-    @Inject('MOBILE_SERVICE') private readonly mobileServiceClient: ClientProxy,
     private readonly logger: AppLoggerService,
   ) {}
 
@@ -55,26 +54,26 @@ export class SelfServiceGatewayService {
   }
 
   getMyCheckInOut(employeeId: number) {
-    return this.send(this.mobileServiceClient, 'mobile_service.transactions.my_check_in_out', {
+    return this.send(this.selfServiceClient, 'mobile_service.transactions.my_check_in_out', {
       employeeId,
     });
   }
 
   getMyWorkLocation(employeeId: number) {
-    return this.send(this.mobileServiceClient, 'mobile_service.location.my_work_location', {
+    return this.send(this.selfServiceClient, 'mobile_service.location.my_work_location', {
       employeeId,
     });
   }
 
   getLastTransactions(employeeId: number) {
-    return this.send(this.mobileServiceClient, 'mobile_service.transactions.last_transactions', {
+    return this.send(this.selfServiceClient, 'mobile_service.transactions.last_transactions', {
       employeeId,
     });
   }
 
   verifyAssignedLocation(employeeId: number, dto: VerifyLocationDto) {
     return this.send(
-      this.mobileServiceClient,
+      this.selfServiceClient,
       'mobile_service.location.verify_assigned_location',
       {
         employeeId,
@@ -84,13 +83,13 @@ export class SelfServiceGatewayService {
   }
 
   verifyLocation(dto: VerifyLocationDto) {
-    return this.send(this.mobileServiceClient, 'mobile_service.location.verify_location', {
+    return this.send(this.selfServiceClient, 'mobile_service.location.verify_location', {
       coordinates: dto.coordinates,
     });
   }
 
   getSparkTodayLocation(employeeId: number) {
-    return this.send(this.mobileServiceClient, 'mobile_service.org.spark.today_location', {
+    return this.send(this.selfServiceClient, 'mobile_service.org.spark.today_location', {
       employeeId,
     });
   }
@@ -101,9 +100,13 @@ export class SelfServiceGatewayService {
 
   verifyEncounter(payload: IdsGatewayPayload) {
     return this.send(
-      this.mobileServiceClient,
+      this.selfServiceClient,
       'mobile_service.ids.verify_encounter',
       payload,
     );
+  }
+
+  workflow(pattern: string, payload: any) {
+    return this.send(this.selfServiceClient, pattern, payload);
   }
 }

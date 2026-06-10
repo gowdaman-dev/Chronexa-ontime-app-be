@@ -19,16 +19,6 @@ import { SelfServiceGatewayService } from './self-service.service';
           },
         }),
       },
-      {
-        name: 'MOBILE_SERVICE',
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.NATS,
-          options: {
-            servers: [config.getOrThrow<string>('natsUrl')],
-          },
-        }),
-      },
     ]),
   ],
   controllers: [SelfServiceController],
