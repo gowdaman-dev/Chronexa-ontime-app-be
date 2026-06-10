@@ -73,15 +73,6 @@
         "tsConfigPath": "apps/gateway/tsconfig.app.json"
       }
     },
-    "mobile-service": {
-      "type": "application",
-      "root": "apps/mobile-service",
-      "entryFile": "main",
-      "sourceRoot": "apps/mobile-service/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/mobile-service/tsconfig.app.json"
-      }
-    },
     "prisma": {
       "type": "library",
       "root": "libs/prisma",
