@@ -763,6 +763,34 @@ export function ApiAddEventTransactionSubjectBody() {
   );
 }
 
+export function ApiVerifyEventTransactionBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['employee_id', 'reason', 'time_stamp', 'coordinates'],
+        properties: {
+          employee_id: { type: 'number', example: 1001 },
+          reason: { type: 'string', enum: ['IN', 'OUT'], example: 'IN' },
+          time_stamp: {
+            type: 'string',
+            example: '2026-06-10T08:00:00',
+            description: 'ISO 8601 date-time',
+          },
+          coordinates: {
+            type: 'array',
+            items: { type: 'number' },
+            minItems: 2,
+            maxItems: 2,
+            example: [25.2048, 55.2708],
+            description: '[latitude, longitude]',
+          },
+        },
+      },
+    }),
+  );
+}
+
 export function ApiLeaveTypeBody() {
   return applyDecorators(
     ApiBody({

@@ -23,6 +23,7 @@ import {
   ApiHolidayBody,
   ApiAddEventTransactionBody,
   ApiAddEventTransactionSubjectBody,
+  ApiVerifyEventTransactionBody,
 } from '@app/dto/self-service.doc';
 import {
   ApiLeaveTypeFilters,
@@ -247,6 +248,18 @@ export class SelfServiceExtendedController {
   )
   addEventTransactionWithSubjectId(@CurrentUser() user: AuthUser, @Body() body: any) {
     return this.selfService.workflow('self_service.event_transactions.add_with_subject_id', {
+      user: this.userPayload(user),
+      body,
+    });
+  }
+
+  @Post('employeeEventTransaction/verify')
+  @ApiSelfServiceOperation(
+    'Geo-fenced punch: verify location and create event transaction',
+    ApiVerifyEventTransactionBody(),
+  )
+  verifyEventTransaction(@CurrentUser() user: AuthUser, @Body() body: any) {
+    return this.selfService.workflow('self_service.event_transactions.verify', {
       user: this.userPayload(user),
       body,
     });
