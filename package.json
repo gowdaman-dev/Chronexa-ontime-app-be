@@ -21,7 +21,8 @@
     "start:auth-service": "nest start auth-service",
     "start:user-service": "nest start user-service",
     "start:self-service": "nest start self-service",
-    "start:ontime-service": "nest start ontime-service"
+    "start:ontime-service": "nest start ontime-service",
+    "test": "jest"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

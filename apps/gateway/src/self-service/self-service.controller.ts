@@ -23,9 +23,27 @@ import {
   ApiIdsPunchOperation,
   ApiIdsVerifyEncounterOperation,
   ApiLastTransactionsOperation,
+  ApiSelfServiceOperation,
   ApiSimpleSelfServiceReadOperation,
   ApiVerifyLocationOperation,
+  ApiSelfServiceIdParam,
+  ApiBulkDeleteBody,
+  ApiApproveRejectBody,
+  ApiAddLeaveBody,
+  ApiAddShortPermissionBody,
+  ApiAddManualTransactionBody,
+  ApiGroupApproveTransactionsBody,
+  ApiGroupApproveByEmployeeIdsBody,
 } from '@app/dto/self-service.doc';
+import {
+  ApiPaginationFilters,
+  ApiLeaveListFilters,
+  ApiShortPermissionListFilters,
+  ApiMissingMovementFilters,
+  ApiManualTransactionFilters,
+  ApiManualTransactionApproveQuery,
+  ApiManualTransactionRejectQuery,
+} from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from './self-service.service';
 
 @ApiTags('Mobile Self Service')
@@ -133,7 +151,7 @@ export class SelfServiceController {
 
   @Post('employeeLeave/add')
   @UseInterceptors(FileInterceptor('leave_doc'))
-  @ApiSimpleSelfServiceReadOperation('Add employee leave request')
+  @ApiSelfServiceOperation('Add employee leave request', ApiAddLeaveBody())
   addEmployeeLeave(
     @CurrentUser() user: AuthUser,
     @Body() body: any,
@@ -147,25 +165,29 @@ export class SelfServiceController {
   }
 
   @Get('employeeLeave/all')
-  @ApiSimpleSelfServiceReadOperation('Get all employee leave requests')
+  @ApiSelfServiceOperation('Get all employee leave requests', ApiLeaveListFilters())
   getAllEmployeeLeaves(@Query() query: any) {
     return this.selfService.workflow('self_service.leaves.all', { query });
   }
 
   @Get('employeeLeave/pending')
-  @ApiSimpleSelfServiceReadOperation('Get pending leave requests')
+  @ApiSelfServiceOperation('Get pending leave requests', ApiPaginationFilters())
   getPendingEmployeeLeaves(@Query() query: any) {
     return this.selfService.workflow('self_service.leaves.pending', { query });
   }
 
   @Get('employeeLeave/get/:id')
-  @ApiSimpleSelfServiceReadOperation('Get leave request by ID')
+  @ApiSelfServiceOperation('Get leave request by ID', ApiSelfServiceIdParam())
   getEmployeeLeave(@Param('id') id: string) {
     return this.selfService.workflow('self_service.leaves.get', { id: +id });
   }
 
   @Get('employeeLeave/byEmployee/:id')
-  @ApiSimpleSelfServiceReadOperation('Get leave requests by employee ID')
+  @ApiSelfServiceOperation(
+    'Get leave requests by employee ID',
+    ApiSelfServiceIdParam(),
+    ApiLeaveListFilters(),
+  )
   getEmployeeLeavesByEmployee(@Param('id') id: string, @Query() query: any) {
     return this.selfService.workflow('self_service.leaves.by_employee', {
       id: +id,
@@ -174,7 +196,11 @@ export class SelfServiceController {
   }
 
   @Put('employeeLeave/approve/:id')
-  @ApiSimpleSelfServiceReadOperation('Approve or reject leave request')
+  @ApiSelfServiceOperation(
+    'Approve or reject leave request',
+    ApiSelfServiceIdParam(),
+    ApiApproveRejectBody(),
+  )
   approveEmployeeLeave(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -189,7 +215,7 @@ export class SelfServiceController {
 
   @Put('employeeLeave/edit/:id')
   @UseInterceptors(FileInterceptor('leave_doc'))
-  @ApiSimpleSelfServiceReadOperation('Edit leave request')
+  @ApiSelfServiceOperation('Edit leave request', ApiSelfServiceIdParam(), ApiAddLeaveBody())
   editEmployeeLeave(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -205,19 +231,19 @@ export class SelfServiceController {
   }
 
   @Delete('employeeLeave/delete')
-  @ApiSimpleSelfServiceReadOperation('Delete multiple leave requests')
+  @ApiSelfServiceOperation('Delete multiple leave requests', ApiBulkDeleteBody('employee leave'))
   deleteManyEmployeeLeaves(@Body() body: any) {
     return this.selfService.workflow('self_service.leaves.delete_many', { body });
   }
 
   @Delete('employeeLeave/delete/:id')
-  @ApiSimpleSelfServiceReadOperation('Delete leave request by ID')
+  @ApiSelfServiceOperation('Delete leave request by ID', ApiSelfServiceIdParam())
   deleteEmployeeLeave(@Param('id') id: string) {
     return this.selfService.workflow('self_service.leaves.delete', { id: +id });
   }
 
   @Get('employeeLeave/myleavesRequests')
-  @ApiSimpleSelfServiceReadOperation('Get logged-in user leave requests')
+  @ApiSelfServiceOperation('Get logged-in user leave requests', ApiPaginationFilters())
   getMyLeaveRequests(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.leaves.my_requests', {
       user: this.userPayload(user),
@@ -226,7 +252,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeLeave/team/all')
-  @ApiSimpleSelfServiceReadOperation('Get team leave requests')
+  @ApiSelfServiceOperation('Get team leave requests', ApiLeaveListFilters())
   getTeamLeaveRequests(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.leaves.team_all', {
       user: this.userPayload(user),
@@ -235,7 +261,7 @@ export class SelfServiceController {
   }
 
   @Post('employeeShortPermission/add')
-  @ApiSimpleSelfServiceReadOperation('Add short permission request')
+  @ApiSelfServiceOperation('Add short permission request', ApiAddShortPermissionBody())
   addShortPermission(@CurrentUser() user: AuthUser, @Body() body: any) {
     return this.selfService.workflow('self_service.short_permissions.add', {
       user: this.userPayload(user),
@@ -244,7 +270,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/all')
-  @ApiSimpleSelfServiceReadOperation('Get all short permission requests')
+  @ApiSelfServiceOperation('Get all short permission requests', ApiShortPermissionListFilters())
   getAllShortPermissions(@Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.all', {
       query,
@@ -252,7 +278,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/pending')
-  @ApiSimpleSelfServiceReadOperation('Get pending short permissions')
+  @ApiSelfServiceOperation('Get pending short permissions', ApiPaginationFilters())
   getPendingShortPermissions(@Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.pending', {
       query,
@@ -260,7 +286,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/get/:id')
-  @ApiSimpleSelfServiceReadOperation('Get short permission by ID')
+  @ApiSelfServiceOperation('Get short permission by ID', ApiSelfServiceIdParam())
   getShortPermission(@Param('id') id: string) {
     return this.selfService.workflow('self_service.short_permissions.get', {
       id: +id,
@@ -268,7 +294,11 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/byEmployee/:id')
-  @ApiSimpleSelfServiceReadOperation('Get short permissions by employee ID')
+  @ApiSelfServiceOperation(
+    'Get short permissions by employee ID',
+    ApiSelfServiceIdParam(),
+    ApiShortPermissionListFilters(),
+  )
   getShortPermissionsByEmployee(@Param('id') id: string, @Query() query: any) {
     return this.selfService.workflow(
       'self_service.short_permissions.by_employee',
@@ -280,7 +310,11 @@ export class SelfServiceController {
   }
 
   @Put('employeeShortPermission/approve/:id')
-  @ApiSimpleSelfServiceReadOperation('Approve or reject short permission')
+  @ApiSelfServiceOperation(
+    'Approve or reject short permission',
+    ApiSelfServiceIdParam(),
+    ApiApproveRejectBody(),
+  )
   approveShortPermission(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -294,7 +328,11 @@ export class SelfServiceController {
   }
 
   @Put('employeeShortPermission/edit/:id')
-  @ApiSimpleSelfServiceReadOperation('Edit short permission')
+  @ApiSelfServiceOperation(
+    'Edit short permission',
+    ApiSelfServiceIdParam(),
+    ApiAddShortPermissionBody(),
+  )
   editShortPermission(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -308,7 +346,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/search')
-  @ApiSimpleSelfServiceReadOperation('Search short permission requests')
+  @ApiSelfServiceOperation('Search short permission requests', ApiShortPermissionListFilters())
   searchShortPermissions(@Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.search', {
       query,
@@ -316,7 +354,7 @@ export class SelfServiceController {
   }
 
   @Delete('employeeShortPermission/delete')
-  @ApiSimpleSelfServiceReadOperation('Delete multiple short permissions')
+  @ApiSelfServiceOperation('Delete multiple short permissions', ApiBulkDeleteBody('short permission'))
   deleteManyShortPermissions(@Body() body: any) {
     return this.selfService.workflow(
       'self_service.short_permissions.delete_many',
@@ -325,7 +363,7 @@ export class SelfServiceController {
   }
 
   @Delete('employeeShortPermission/delete/:id')
-  @ApiSimpleSelfServiceReadOperation('Delete short permission by ID')
+  @ApiSelfServiceOperation('Delete short permission by ID', ApiSelfServiceIdParam())
   deleteShortPermission(@Param('id') id: string) {
     return this.selfService.workflow('self_service.short_permissions.delete', {
       id: +id,
@@ -333,7 +371,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeShortPermission/team/all')
-  @ApiSimpleSelfServiceReadOperation('Get team short permission requests')
+  @ApiSelfServiceOperation('Get team short permission requests', ApiShortPermissionListFilters())
   getTeamShortPermissions(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.team_all', {
       user: this.userPayload(user),
@@ -342,7 +380,7 @@ export class SelfServiceController {
   }
 
   @Get('missingMovement/all')
-  @ApiSimpleSelfServiceReadOperation('Get all missing movements')
+  @ApiSelfServiceOperation('Get all missing movements', ApiMissingMovementFilters())
   getAllMissingMovements(@Query() query: any) {
     return this.selfService.workflow('self_service.missing_movements.all', {
       query,
@@ -350,7 +388,7 @@ export class SelfServiceController {
   }
 
   @Get('missingMovement/team/all')
-  @ApiSimpleSelfServiceReadOperation('Get team missing movements')
+  @ApiSelfServiceOperation('Get team missing movements', ApiMissingMovementFilters())
   getTeamMissingMovements(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.missing_movements.team_all', {
       user: this.userPayload(user),
@@ -360,7 +398,7 @@ export class SelfServiceController {
 
   @Post('employeeManualTransaction/add')
   @UseInterceptors(FileInterceptor('attachment'))
-  @ApiSimpleSelfServiceReadOperation('Add manual movement transaction')
+  @ApiSelfServiceOperation('Add manual movement transaction', ApiAddManualTransactionBody())
   addManualTransaction(
     @CurrentUser() user: AuthUser,
     @Body() body: any,
@@ -374,7 +412,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeManualTransaction/all')
-  @ApiSimpleSelfServiceReadOperation('Get all manual movement transactions')
+  @ApiSelfServiceOperation('Get all manual movement transactions', ApiManualTransactionFilters())
   getAllManualTransactions(@Query() query: any) {
     return this.selfService.workflow('self_service.manual_transactions.all', {
       query,
@@ -382,7 +420,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeManualTransaction/get/:id')
-  @ApiSimpleSelfServiceReadOperation('Get manual movement transaction by ID')
+  @ApiSelfServiceOperation('Get manual movement transaction by ID', ApiSelfServiceIdParam())
   getManualTransaction(@Param('id') id: string) {
     return this.selfService.workflow('self_service.manual_transactions.get', {
       id: +id,
@@ -391,7 +429,11 @@ export class SelfServiceController {
 
   @Put('employeeManualTransaction/edit/:id')
   @UseInterceptors(FileInterceptor('attachment'))
-  @ApiSimpleSelfServiceReadOperation('Edit manual movement transaction')
+  @ApiSelfServiceOperation(
+    'Edit manual movement transaction',
+    ApiSelfServiceIdParam(),
+    ApiAddManualTransactionBody(),
+  )
   editManualTransaction(
     @Param('id') id: string,
     @Body() body: any,
@@ -405,7 +447,10 @@ export class SelfServiceController {
   }
 
   @Delete('employeeManualTransaction/delete')
-  @ApiSimpleSelfServiceReadOperation('Delete multiple manual movement transactions')
+  @ApiSelfServiceOperation(
+    'Delete multiple manual movement transactions',
+    ApiBulkDeleteBody('manual transaction'),
+  )
   deleteManyManualTransactions(@Body() body: any) {
     return this.selfService.workflow(
       'self_service.manual_transactions.delete_many',
@@ -414,7 +459,7 @@ export class SelfServiceController {
   }
 
   @Delete('employeeManualTransaction/delete/:id')
-  @ApiSimpleSelfServiceReadOperation('Delete manual movement transaction by ID')
+  @ApiSelfServiceOperation('Delete manual movement transaction by ID', ApiSelfServiceIdParam())
   deleteManualTransaction(@Param('id') id: string) {
     return this.selfService.workflow('self_service.manual_transactions.delete', {
       id: +id,
@@ -422,7 +467,7 @@ export class SelfServiceController {
   }
 
   @Get('employeeManualTransaction/team/all')
-  @ApiSimpleSelfServiceReadOperation('Get team manual movement transactions')
+  @ApiSelfServiceOperation('Get team manual movement transactions', ApiManualTransactionFilters())
   getTeamManualTransactions(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.manual_transactions.team_all', {
       user: this.userPayload(user),
@@ -431,7 +476,10 @@ export class SelfServiceController {
   }
 
   @Put('employeeManualTransaction/approve')
-  @ApiSimpleSelfServiceReadOperation('Approve manual movement transaction')
+  @ApiSelfServiceOperation(
+    'Approve manual movement transaction',
+    ApiManualTransactionApproveQuery(),
+  )
   approveManualTransaction(
     @CurrentUser() user: AuthUser,
     @Query() query: any,
@@ -445,7 +493,7 @@ export class SelfServiceController {
   }
 
   @Put('employeeManualTransaction/reject')
-  @ApiSimpleSelfServiceReadOperation('Reject manual movement transaction')
+  @ApiSelfServiceOperation('Reject manual movement transaction', ApiManualTransactionRejectQuery())
   rejectManualTransaction(@Query() query: any) {
     return this.selfService.workflow('self_service.manual_transactions.reject', {
       query,
@@ -453,7 +501,7 @@ export class SelfServiceController {
   }
 
   @Put('employeeManualTransaction/groupApproveTransactions')
-  @ApiSimpleSelfServiceReadOperation('Group approve manual transactions')
+  @ApiSelfServiceOperation('Group approve manual transactions', ApiGroupApproveTransactionsBody())
   groupApproveManualTransactions(
     @CurrentUser() user: AuthUser,
     @Body() body: any,
@@ -469,7 +517,10 @@ export class SelfServiceController {
 
   @Put('employeeManualTransaction/groupApproveByEmployeeIds')
   @UseInterceptors(FileInterceptor('attachment'))
-  @ApiSimpleSelfServiceReadOperation('Create group manual transactions by employee IDs')
+  @ApiSelfServiceOperation(
+    'Create group manual transactions by employee IDs',
+    ApiGroupApproveByEmployeeIdsBody(),
+  )
   groupApproveManualTransactionsByEmployeeIds(
     @CurrentUser() user: AuthUser,
     @Body() body: any,

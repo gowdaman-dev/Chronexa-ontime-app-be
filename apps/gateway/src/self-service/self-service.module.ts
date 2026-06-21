@@ -3,6 +3,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { LoggingModule } from '@app/common';
 import { SelfServiceController } from './self-service.controller';
+import { SelfServiceExtendedController } from './self-service-extended.controller';
 import { SelfServiceGatewayService } from './self-service.service';
 
 @Module({
@@ -21,7 +22,7 @@ import { SelfServiceGatewayService } from './self-service.service';
       },
     ]),
   ],
-  controllers: [SelfServiceController],
+  controllers: [SelfServiceController, SelfServiceExtendedController],
   providers: [SelfServiceGatewayService],
   exports: [SelfServiceGatewayService],
 })

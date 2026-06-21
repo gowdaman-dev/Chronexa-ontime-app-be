@@ -22,6 +22,13 @@ describe('MissingMovementsService', () => {
       toNumber: jest.fn((value: any) =>
         value === undefined || value === null || value === '' ? undefined : Number(value),
       ),
+      resolveEmployeeId: jest.fn((query: any) =>
+        query?.employeeId !== undefined
+          ? Number(query.employeeId)
+          : query?.employee_id !== undefined
+            ? Number(query.employee_id)
+            : undefined,
+      ),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       dateFilter: jest.fn(),
     };
@@ -41,6 +48,19 @@ describe('MissingMovementsService', () => {
       hasNext: false,
       total: 1,
     });
+  });
+
+  it('filters missing movements by employee_id alias', async () => {
+    prisma.emp_missing_movements.findMany.mockResolvedValue([]);
+    prisma.emp_missing_movements.count.mockResolvedValue(0);
+
+    await service.all({ query: { employee_id: 55 } });
+
+    expect(prisma.emp_missing_movements.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ Employee_Id: 55 }),
+      }),
+    );
   });
 
   it('filters team missing movements by manager id', async () => {
