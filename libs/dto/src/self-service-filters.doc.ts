@@ -170,7 +170,7 @@ export function ApiReportFilters() {
     q('isabsent', 'Absent filter: true | false', { example: 'false' }),
     q('costcode', 'Cost code filter', { example: 'CC01' }),
     q('costcenter', 'Cost center filter', { example: 'CENTER01' }),
-    q('format', 'Response format: json | html | pdf (html returned for pdf)', { example: 'json' }),
+    q('format', 'Response format: json | html | pdf', { example: 'json' }),
   );
 }
 

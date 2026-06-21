@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { AppLoggerService } from '@app/common';
 import { WorkflowCommonService } from '../shared/workflow-common.service';
 import { ReportQueryService } from '../shared/report-query.service';
+import { ReportPdfService } from '../shared/report-pdf.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly common: WorkflowCommonService,
     private readonly reportQuery: ReportQueryService,
+    private readonly reportPdf: ReportPdfService,
     private readonly logger: AppLoggerService,
   ) {}
 
@@ -37,13 +39,36 @@ export class ReportsService {
   ) {
     return this.run(period, async () => {
       const range = this.reportQuery.resolveDateRange(period, payload.query ?? {});
-      const query = { ...(payload.query ?? {}), ...range };
+      const format = String(payload.query?.format ?? 'json').toLowerCase();
+      const query =
+        format === 'pdf' || format === 'html'
+          ? {
+              ...(payload.query ?? {}),
+              ...range,
+              limit: payload.query?.limit ?? 1000,
+              offset: payload.query?.offset ?? 1,
+            }
+          : { ...(payload.query ?? {}), ...range };
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
       const title = `${period.toUpperCase()} ATTENDANCE REPORT`;
-      const format = String(payload.query?.format ?? 'json').toLowerCase();
       if (format === 'pdf' || format === 'html') {
-        const html = this.reportQuery.buildReportHtml(title, result.data);
+        const html = this.reportQuery.buildReportHtml(title, result.data, {
+          from_date: range.from_date,
+          to_date: range.to_date,
+          total: result.total,
+        });
+        if (format === 'pdf') {
+          const pdfBuffer = await this.reportPdf.htmlToPdfBuffer(html);
+          return {
+            success: true,
+            format: 'pdf',
+            title,
+            pdfBase64: pdfBuffer.toString('base64'),
+            total: result.total,
+            hasNext: result.hasNext,
+          };
+        }
         return {
           success: true,
           format,

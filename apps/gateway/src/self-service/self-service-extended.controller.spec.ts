@@ -43,7 +43,8 @@ describe('SelfServiceExtendedController', () => {
 
   it('forwards report attendance with user and query', async () => {
     const query = { from_date: '2025-01-01', to_date: '2025-06-30', department_id: 1 };
-    await controller.getAttendanceReport(user, query);
+    const res = { setHeader: jest.fn(), send: jest.fn() };
+    await controller.getAttendanceReport(user, query, res);
 
     expect(service.workflow).toHaveBeenCalledWith('self_service.reports.attendance', {
       user: expect.objectContaining({ employeeId: 123 }),

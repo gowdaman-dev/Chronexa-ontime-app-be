@@ -133,22 +133,55 @@ export class ReportQueryService {
     };
   }
 
-  buildReportHtml(title: string, rows: any[]) {
+  buildReportHtml(title: string, rows: any[], meta?: { from_date?: string; to_date?: string; total?: number }) {
+    const maxRows = 1000;
+    const displayRows = rows.slice(0, maxRows);
+    const truncated = rows.length > maxRows;
     const headers =
-      rows.length > 0
-        ? Object.keys(rows[0]).slice(0, 12)
-        : ['EmployeeID', 'Name', 'WorkDate', 'PunchIn', 'PunchOut'];
-    const head = headers.map((h) => `<th>${h}</th>`).join('');
-    const body = rows
+      displayRows.length > 0
+        ? Object.keys(displayRows[0]).slice(0, 16)
+        : ['EmployeeID', 'WorkDate', 'PunchIn', 'PunchOut'];
+    const escape = (value: unknown) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const head = headers.map((h) => `<th>${escape(h)}</th>`).join('');
+    const body = displayRows
       .map(
         (row) =>
-          `<tr>${headers.map((h) => `<td>${row[h] ?? ''}</td>`).join('')}</tr>`,
+          `<tr>${headers.map((h) => `<td>${escape(row[h])}</td>`).join('')}</tr>`,
       )
       .join('');
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
-      <style>body{font-family:Arial,sans-serif;padding:24px}table{border-collapse:collapse;width:100%}
-      th,td{border:1px solid #ccc;padding:6px 8px;font-size:12px}th{background:#f3f4f6}</style></head>
-      <body><h1>${title}</h1><p>Generated ${new Date().toISOString()}</p>
-      <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+    const range =
+      meta?.from_date && meta?.to_date
+        ? `<p><strong>Period:</strong> ${escape(meta.from_date)} to ${escape(meta.to_date)}</p>`
+        : '';
+    const totalLine =
+      meta?.total !== undefined
+        ? `<p><strong>Total records:</strong> ${meta.total}${truncated ? ` (showing first ${maxRows})` : ''}</p>`
+        : '';
+    const note = truncated
+      ? `<p class="note">PDF shows the first ${maxRows.toLocaleString()} rows. Narrow filters or use JSON export for full data.</p>`
+      : '';
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(title)}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111}
+        h1{font-size:20px;margin:0 0 8px}
+        p{margin:4px 0 12px;font-size:12px}
+        .note{color:#b45309;font-size:11px}
+        table{border-collapse:collapse;width:100%;font-size:10px}
+        th,td{border:1px solid #d1d5db;padding:4px 6px;text-align:left;vertical-align:top}
+        th{background:#f3f4f6;font-weight:600}
+        tr:nth-child(even){background:#fafafa}
+      </style></head>
+      <body>
+        <h1>${escape(title)}</h1>
+        <p>Generated ${escape(new Date().toISOString())}</p>
+        ${range}
+        ${totalLine}
+        ${note}
+        <table><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="' + headers.length + '">No data</td></tr>'}</tbody></table>
+      </body></html>`;
   }
 }

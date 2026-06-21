@@ -363,11 +363,12 @@ export class SelfServiceExtendedController {
     'Daily attendance report from sp_employee_daily_report',
     ApiReportFilters(),
   )
-  getAttendanceReport(@CurrentUser() user: AuthUser, @Query() query: any) {
-    return this.selfService.workflow('self_service.reports.attendance', {
-      user: this.userPayload(user),
-      query,
-    });
+  getAttendanceReport(
+    @CurrentUser() user: AuthUser,
+    @Query() query: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.renderReport('self_service.reports.attendance', user, query, res);
   }
 
   @Get('report/daily')
@@ -399,11 +400,21 @@ export class SelfServiceExtendedController {
       query,
     });
     const format = String(query?.format ?? 'json').toLowerCase();
-    if ((format === 'pdf' || format === 'html') && result?.html) {
+    const period = pattern.split('.').pop() ?? 'report';
+    if (format === 'pdf' && result?.pdfBase64) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${period}-attendance-report.pdf"`,
+      );
+      res.send(Buffer.from(result.pdfBase64, 'base64'));
+      return;
+    }
+    if (format === 'html' && result?.html) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader(
         'Content-Disposition',
-        `inline; filename="${pattern.split('.').pop()}-report.html"`,
+        `inline; filename="${period}-report.html"`,
       );
       res.send(result.html);
       return;
