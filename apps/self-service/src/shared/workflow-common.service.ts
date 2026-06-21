@@ -73,4 +73,36 @@ export class WorkflowCommonService {
     const filename = file?.filename ?? file?.originalname;
     return filename ? `${prefix}/${filename}` : undefined;
   }
+
+  parseNumberArray(value: any): number[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => Number(item)).filter(Number.isFinite);
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) return [value];
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        return this.parseNumberArray(parsed);
+      } catch {
+        return value
+          .split(',')
+          .map((item) => Number(item.trim()))
+          .filter(Number.isFinite);
+      }
+    }
+    return [];
+  }
+
+  resolveEmployeeId(query: Record<string, any> = {}) {
+    return (
+      this.toNumber(query.employeeId) ??
+      this.toNumber(query.employee_id) ??
+      this.toNumber(query.Employee_Id)
+    );
+  }
+
+  isManagerRole(user: any) {
+    const role = String(user?.role ?? '').toLowerCase();
+    return role.includes('manager') || role.includes('admin');
+  }
 }
