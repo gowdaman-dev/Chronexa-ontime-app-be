@@ -19,6 +19,7 @@ describe('EventTransactionsController', () => {
       lastTransaction: jest.fn(),
       punchStatus: jest.fn(),
       todayStatus: jest.fn(),
+      verify: jest.fn(),
     };
     controller = new EventTransactionsController(service);
   });
@@ -39,5 +40,14 @@ describe('EventTransactionsController', () => {
     const payload = { query: { employee_id: 123 } };
     await controller.todayStatus(payload);
     expect(service.todayStatus).toHaveBeenCalledWith(payload);
+  });
+
+  it('routes verify requests to the service', async () => {
+    const payload = {
+      body: { employee_id: 100, reason: 'IN', time_stamp: '2026-06-10T08:00:00', coordinates: [25, 55] },
+      user: { employeeId: 100 },
+    };
+    await controller.verify(payload);
+    expect(service.verify).toHaveBeenCalledWith(payload);
   });
 });

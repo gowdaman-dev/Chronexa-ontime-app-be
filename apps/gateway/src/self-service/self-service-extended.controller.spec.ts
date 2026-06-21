@@ -60,4 +60,19 @@ describe('SelfServiceExtendedController', () => {
       body,
     });
   });
+
+  it('forwards event transaction verify', async () => {
+    const body = {
+      employee_id: 123,
+      reason: 'IN',
+      time_stamp: '2026-06-10T08:00:00',
+      coordinates: [25.2048, 55.2708],
+    };
+    await controller.verifyEventTransaction(user, body);
+
+    expect(service.workflow).toHaveBeenCalledWith('self_service.event_transactions.verify', {
+      user: expect.objectContaining({ employeeId: 123 }),
+      body,
+    });
+  });
 });

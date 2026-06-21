@@ -16,6 +16,11 @@ export class EventTransactionsController {
     return this.transactions.addWithSubjectId(data);
   }
 
+  @MessagePattern('self_service.event_transactions.verify')
+  verify(@Payload() data: any) {
+    return this.transactions.verify(data);
+  }
+
   @MessagePattern('self_service.event_transactions.all')
   all(@Payload() data: any) {
     return this.transactions.all(data);

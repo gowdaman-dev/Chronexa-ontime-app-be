@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { AppLoggerService } from '@app/common';
 import { WorkflowCommonService } from '../shared/workflow-common.service';
+import { MobileCommonService } from '../shared/mobile-common.service';
 
 @Injectable()
 export class EventTransactionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly common: WorkflowCommonService,
+    private readonly mobile: MobileCommonService,
     private readonly logger: AppLoggerService,
   ) {}
 
@@ -132,6 +134,63 @@ export class EventTransactionsService {
         user: payload.user,
         body: { ...body, employee_id: emp.employee_id },
       });
+    });
+  }
+
+  async verify(payload: { body: any; user: any }) {
+    return this.run('verify', async () => {
+      const body = payload.body ?? {};
+      const employeeId = this.common.toNumber(body.employee_id);
+      const reason = String(body.reason ?? '').toUpperCase();
+      const coordinates = body.coordinates as number[];
+      const timeStamp = body.time_stamp ?? body.transaction_time;
+
+      if (!employeeId || !['IN', 'OUT'].includes(reason)) {
+        this.common.fail(400, 'Invalid input');
+      }
+      this.mobile.assertCoordinates(coordinates);
+
+      const employeeExists = await this.prisma.employee_master.findFirst({
+        where: { employee_id: employeeId },
+        select: { employee_id: true },
+      });
+      if (!employeeExists) {
+        this.common.fail(400, 'Invalid employee ID. The employee does not exist.');
+      }
+
+      const locations = await this.prisma.locations.findMany({
+        select: { radius: true, geolocation: true },
+      });
+      const residesWithinLocation = this.mobile.isWithinAnyLocation(coordinates, locations);
+
+      if (!residesWithinLocation) {
+        return {
+          message: 'failure',
+          data: { coordinates, residesWithinLocation: false },
+        };
+      }
+
+      const transactionTime = this.common.parseDate(timeStamp) ?? new Date();
+      const geolocation = `${coordinates[0]},${coordinates[1]}`;
+      const actorId = Number(payload.user?.employeeId ?? employeeId);
+      const data = await this.prisma.employee_event_transactions.create({
+        data: {
+          employee_id: employeeId,
+          transaction_time: transactionTime,
+          reason,
+          remarks: `Check ${reason} via Aldar Home`,
+          user_entry_flag: reason === 'IN',
+          geolocation,
+          transaction_type: reason,
+          created_id: actorId,
+          last_updated_id: actorId,
+        },
+      });
+
+      return {
+        message: 'success',
+        data: { transaction: data, residesWithinLocation: true },
+      };
     });
   }
 
