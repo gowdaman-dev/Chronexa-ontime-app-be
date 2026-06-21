@@ -35,6 +35,7 @@ import { AttendanceService } from './attendance/attendance.service';
 import { ReportsController } from './reports/reports.controller';
 import { ReportsService } from './reports/reports.service';
 import { ReportQueryService } from './shared/report-query.service';
+import { ReportPdfService } from './shared/report-pdf.service';
 
 @Module({
   imports: [ConfigModule, PrismaModule, LoggingModule],
@@ -59,6 +60,7 @@ import { ReportQueryService } from './shared/report-query.service';
     SelfServiceService,
     WorkflowCommonService,
     ReportQueryService,
+    ReportPdfService,
     MobileCommonService,
     LeavesService,
     ShortPermissionsService,

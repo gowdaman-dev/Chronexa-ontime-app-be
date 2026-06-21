@@ -27,7 +27,10 @@ describe('ReportsService', () => {
       isManagerRole: jest.fn(() => false),
     };
     const logger = { info: jest.fn(), error: jest.fn() };
-    service = new ReportsService(common, reportQuery, logger);
+    const reportPdf = {
+      htmlToPdfBuffer: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock')),
+    };
+    service = new ReportsService(common, reportQuery, reportPdf, logger);
   });
 
   it('returns JSON daily report', async () => {
@@ -56,6 +59,22 @@ describe('ReportsService', () => {
       format: 'html',
       title: 'MONTHLY ATTENDANCE REPORT',
       html: '<html>report</html>',
+      total: 1,
+      hasNext: false,
+    });
+  });
+
+  it('returns base64 PDF when format=pdf', async () => {
+    await expect(
+      service.weekly({
+        user: { employeeId: 100, role: 'Admin' },
+        query: { format: 'pdf' },
+      }),
+    ).resolves.toEqual({
+      success: true,
+      format: 'pdf',
+      title: 'WEEKLY ATTENDANCE REPORT',
+      pdfBase64: Buffer.from('%PDF-1.4 mock').toString('base64'),
       total: 1,
       hasNext: false,
     });
