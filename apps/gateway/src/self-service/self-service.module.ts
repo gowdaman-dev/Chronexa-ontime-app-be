@@ -2,9 +2,17 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { LoggingModule } from '@app/common';
-import { SelfServiceController } from './self-service.controller';
-import { SelfServiceExtendedController } from './self-service-extended.controller';
 import { SelfServiceGatewayService } from './self-service.service';
+import { MobileSelfServiceController } from './controllers/mobile.controller';
+import { LeaveController } from './controllers/leave.controller';
+import { ShortPermissionController } from './controllers/short-permission.controller';
+import { MissingMovementController } from './controllers/missing-movement.controller';
+import { ManualTransactionController } from './controllers/manual-transaction.controller';
+import { LeaveTypesController } from './controllers/leave-types.controller';
+import { PermissionTypesController } from './controllers/permission-types.controller';
+import { HolidaysController } from './controllers/holidays.controller';
+import { EventTransactionsController } from './controllers/event-transactions.controller';
+import { ReportsController } from './controllers/reports.controller';
 
 @Module({
   imports: [
@@ -22,7 +30,18 @@ import { SelfServiceGatewayService } from './self-service.service';
       },
     ]),
   ],
-  controllers: [SelfServiceController, SelfServiceExtendedController],
+  controllers: [
+    MobileSelfServiceController,
+    LeaveController,
+    ShortPermissionController,
+    MissingMovementController,
+    ManualTransactionController,
+    LeaveTypesController,
+    PermissionTypesController,
+    HolidaysController,
+    EventTransactionsController,
+    ReportsController,
+  ],
   providers: [SelfServiceGatewayService],
   exports: [SelfServiceGatewayService],
 })
