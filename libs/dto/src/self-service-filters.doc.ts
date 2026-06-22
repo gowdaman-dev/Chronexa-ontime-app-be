@@ -150,7 +150,12 @@ export function ApiHolidayUpcomingFilters() {
 
 export function ApiReportFilters() {
   return applyDecorators(
-    ApiPaginationFilters(),
+    q(
+      'limit',
+      'Page size. Omit (or use 0 / all) to return every matching row — recommended for PDF/HTML downloads.',
+      { type: 'number', example: 100 },
+    ),
+    q('offset', 'Page number (1-based). Only used when limit is set.', { type: 'number', example: 1 }),
     q('from_date', 'Report start date (YYYY-MM-DD)', { example: '2025-01-01' }),
     q('to_date', 'Report end date (YYYY-MM-DD)', { example: '2025-06-30' }),
     q('date', 'Single work date (YYYY-MM-DD)', { example: '2025-06-01' }),
@@ -170,7 +175,11 @@ export function ApiReportFilters() {
     q('isabsent', 'Absent filter: true | false', { example: 'false' }),
     q('costcode', 'Cost code filter', { example: 'CC01' }),
     q('costcenter', 'Cost center filter', { example: 'CENTER01' }),
-    q('format', 'Response format: json | html | pdf', { example: 'json' }),
+    q(
+      'format',
+      'Response format: json | html | pdf. PDF/HTML include all rows when limit is omitted; pass limit to paginate.',
+      { example: 'pdf' },
+    ),
   );
 }
 
