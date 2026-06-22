@@ -1,0 +1,187 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@app/prisma';
+import { WorkflowCommonService } from './workflow-common.service';
+
+export type ReportRoleScope = {
+  employeeId?: number;
+  managerId?: number;
+};
+
+@Injectable()
+export class ReportQueryService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly common: WorkflowCommonService,
+  ) {}
+
+  buildSpWhere(query: Record<string, any> = {}, scope?: ReportRoleScope) {
+    const conditions: string[] = [`EmployeeStatus='Active'`];
+
+    if (query.from_date) {
+      conditions.push(`WorkDate >= '${String(query.from_date).slice(0, 10)}'`);
+    }
+    if (query.to_date) {
+      conditions.push(`WorkDate <= '${String(query.to_date).slice(0, 10)}'`);
+    }
+    if (query.date) {
+      conditions.push(`WorkDate = '${String(query.date).slice(0, 10)}'`);
+    }
+
+    const employeeIds = this.common.parseNumberArray(
+      query.employee_ids ?? query.employeeIds,
+    );
+    const scopedEmployeeId =
+      scope?.employeeId ?? this.common.resolveEmployeeId(query);
+    if (scopedEmployeeId) {
+      conditions.push(`EmployeeID = ${scopedEmployeeId}`);
+    } else if (employeeIds.length) {
+      conditions.push(`EmployeeID IN (${employeeIds.join(',')})`);
+    }
+
+    const organizationId = this.common.toNumber(
+      query.organization_id ?? query.organizationId,
+    );
+    if (organizationId) conditions.push(`OrganizationID = ${organizationId}`);
+
+    const departmentId = this.common.toNumber(
+      query.department_id ?? query.departmentId,
+    );
+    if (departmentId) conditions.push(`DepartmentID = ${departmentId}`);
+
+    const parentOrgId = this.common.toNumber(
+      query.parent_orgid ?? query.parentOrgId,
+    );
+    if (parentOrgId) conditions.push(`ParentOrgID = ${parentOrgId}`);
+
+    const managerId =
+      scope?.managerId ?? this.common.toNumber(query.manager_id ?? query.managerId);
+    if (managerId) conditions.push(`ManagerID = ${managerId}`);
+
+    const employeeTypeIds = this.common.parseNumberArray(
+      query.employee_type_ids ?? query.employeeTypeIds,
+    );
+    if (employeeTypeIds.length) {
+      conditions.push(`EmployeeTypeID IN (${employeeTypeIds.join(',')})`);
+    }
+
+    if (query.isabsent !== undefined) {
+      const val =
+        query.isabsent === true ||
+        query.isabsent === 'true' ||
+        query.isabsent === '1'
+          ? '1'
+          : '0';
+      conditions.push(`IsAbsent = '${val}'`);
+    }
+
+    if (query.costcode) conditions.push(`CostCode = '${query.costcode}'`);
+    if (query.costcenter) conditions.push(`CostCenter = '${query.costcenter}'`);
+
+    return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  }
+
+  async querySpEmployeeDailyReport(
+    query: Record<string, any> = {},
+    scope?: ReportRoleScope,
+  ) {
+    const whereClause = this.buildSpWhere(query, scope);
+    const { skip, take } = this.common.parsePagination(query);
+    const dataQuery = `
+      SELECT * FROM [dbo].[sp_employee_daily_report]
+      ${whereClause}
+      ORDER BY WorkDate DESC, EmployeeID
+      OFFSET ${skip} ROWS FETCH NEXT ${take} ROWS ONLY
+    `;
+    const countQuery = `
+      SELECT COUNT(*) as cnt FROM [dbo].[sp_employee_daily_report]
+      ${whereClause}
+    `;
+    const [data, countResult] = await Promise.all([
+      this.prisma.$queryRawUnsafe<any[]>(dataQuery),
+      this.prisma.$queryRawUnsafe<any[]>(countQuery),
+    ]);
+    const total = countResult?.[0]
+      ? Number(countResult[0].cnt ?? countResult[0].COUNT ?? 0)
+      : 0;
+    return { data, total, hasNext: skip + data.length < total };
+  }
+
+  resolveDateRange(
+    period: 'daily' | 'weekly' | 'monthly',
+    query: Record<string, any> = {},
+  ) {
+    const anchor = query.date
+      ? new Date(String(query.date))
+      : query.from_date
+        ? new Date(String(query.from_date))
+        : new Date();
+    const start = new Date(anchor);
+    const end = new Date(anchor);
+
+    if (period === 'daily') {
+      // single day
+    } else if (period === 'weekly') {
+      start.setDate(start.getDate() - 6);
+    } else {
+      start.setDate(1);
+      end.setMonth(end.getMonth() + 1, 0);
+    }
+
+    return {
+      from_date: start.toISOString().slice(0, 10),
+      to_date: end.toISOString().slice(0, 10),
+    };
+  }
+
+  buildReportHtml(title: string, rows: any[], meta?: { from_date?: string; to_date?: string; total?: number }) {
+    const maxRows = 1000;
+    const displayRows = rows.slice(0, maxRows);
+    const truncated = rows.length > maxRows;
+    const headers =
+      displayRows.length > 0
+        ? Object.keys(displayRows[0]).slice(0, 16)
+        : ['EmployeeID', 'WorkDate', 'PunchIn', 'PunchOut'];
+    const escape = (value: unknown) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const head = headers.map((h) => `<th>${escape(h)}</th>`).join('');
+    const body = displayRows
+      .map(
+        (row) =>
+          `<tr>${headers.map((h) => `<td>${escape(row[h])}</td>`).join('')}</tr>`,
+      )
+      .join('');
+    const range =
+      meta?.from_date && meta?.to_date
+        ? `<p><strong>Period:</strong> ${escape(meta.from_date)} to ${escape(meta.to_date)}</p>`
+        : '';
+    const totalLine =
+      meta?.total !== undefined
+        ? `<p><strong>Total records:</strong> ${meta.total}${truncated ? ` (showing first ${maxRows})` : ''}</p>`
+        : '';
+    const note = truncated
+      ? `<p class="note">PDF shows the first ${maxRows.toLocaleString()} rows. Narrow filters or use JSON export for full data.</p>`
+      : '';
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(title)}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111}
+        h1{font-size:20px;margin:0 0 8px}
+        p{margin:4px 0 12px;font-size:12px}
+        .note{color:#b45309;font-size:11px}
+        table{border-collapse:collapse;width:100%;font-size:10px}
+        th,td{border:1px solid #d1d5db;padding:4px 6px;text-align:left;vertical-align:top}
+        th{background:#f3f4f6;font-weight:600}
+        tr:nth-child(even){background:#fafafa}
+      </style></head>
+      <body>
+        <h1>${escape(title)}</h1>
+        <p>Generated ${escape(new Date().toISOString())}</p>
+        ${range}
+        ${totalLine}
+        ${note}
+        <table><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="' + headers.length + '">No data</td></tr>'}</tbody></table>
+      </body></html>`;
+  }
+}
