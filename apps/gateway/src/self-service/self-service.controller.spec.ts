@@ -1,6 +1,6 @@
-const { SelfServiceController } = require('./self-service.controller');
+const { MobileSelfServiceController } = require('./controllers/mobile.controller');
 
-describe('SelfServiceController', () => {
+describe('MobileSelfServiceController', () => {
   let service: any;
   let controller: any;
   const user = {
@@ -23,7 +23,7 @@ describe('SelfServiceController', () => {
       punch: jest.fn(),
       verifyEncounter: jest.fn(),
     } as any;
-    controller = new SelfServiceController(service);
+    controller = new MobileSelfServiceController(service);
   });
 
   it('passes current employee id to my-check-in-out', async () => {
