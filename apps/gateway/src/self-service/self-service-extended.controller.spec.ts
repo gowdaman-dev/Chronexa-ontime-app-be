@@ -1,8 +1,9 @@
-const { SelfServiceExtendedController } = require('./self-service-extended.controller');
+const { LeaveTypesController } = require('./controllers/leave-types.controller');
+const { EventTransactionsController } = require('./controllers/event-transactions.controller');
+const { ReportsController } = require('./controllers/reports.controller');
 
-describe('SelfServiceExtendedController', () => {
+describe('Self service domain controllers', () => {
   let service: any;
-  let controller: any;
   const user = {
     userId: 10,
     employeeId: 123,
@@ -14,10 +15,10 @@ describe('SelfServiceExtendedController', () => {
 
   beforeEach(() => {
     service = { workflow: jest.fn().mockResolvedValue({ success: true }) };
-    controller = new SelfServiceExtendedController(service);
   });
 
   it('forwards leave type list with query filters', async () => {
+    const controller = new LeaveTypesController(service);
     await controller.getAllLeaveTypes({ search: 'annual', limit: 10, offset: 1 });
 
     expect(service.workflow).toHaveBeenCalledWith('self_service.leave_types.all', {
@@ -26,6 +27,7 @@ describe('SelfServiceExtendedController', () => {
   });
 
   it('forwards leave type create with user payload', async () => {
+    const controller = new LeaveTypesController(service);
     await controller.addLeaveType(user, { leave_type_code: 'AL', leave_type_eng: 'Annual' });
 
     expect(service.workflow).toHaveBeenCalledWith('self_service.leave_types.add', {
@@ -42,6 +44,7 @@ describe('SelfServiceExtendedController', () => {
   });
 
   it('forwards report attendance with user and query', async () => {
+    const controller = new ReportsController(service);
     const query = { from_date: '2025-01-01', to_date: '2025-06-30', department_id: 1 };
     const res = { setHeader: jest.fn(), send: jest.fn() };
     await controller.getAttendanceReport(user, query, res);
@@ -53,6 +56,7 @@ describe('SelfServiceExtendedController', () => {
   });
 
   it('forwards event transaction create', async () => {
+    const controller = new EventTransactionsController(service);
     const body = { employee_id: 123, reason: 'IN', transaction_time: '2026-06-10T08:00:00' };
     await controller.addEventTransaction(user, body);
 
@@ -63,6 +67,7 @@ describe('SelfServiceExtendedController', () => {
   });
 
   it('forwards event transaction verify', async () => {
+    const controller = new EventTransactionsController(service);
     const body = {
       employee_id: 123,
       reason: 'IN',

@@ -38,6 +38,19 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Chronexa Mobile API Gateway')
     .setDescription('API Gateway for Chronexa Mobile application')
+    .addTag('Authentication', 'Login, logout, and token management')
+    .addTag('User Management', 'User accounts and security')
+    .addTag('Employee Management', 'Employee master data')
+    .addTag('Mobile', 'Mobile check-in, location, and IDS punch')
+    .addTag('Employee Leave', 'Leave requests and approvals')
+    .addTag('Short Permission', 'Short permission requests and approvals')
+    .addTag('Missing Movement', 'Missing movement records')
+    .addTag('Manual Transaction', 'Manual movement transactions')
+    .addTag('Leave Types', 'Leave type master data')
+    .addTag('Permission Types', 'Permission type master data')
+    .addTag('Holidays', 'Holiday calendar')
+    .addTag('Event Transactions', 'Punch and event transactions')
+    .addTag('Reports', 'Daily, weekly, and monthly attendance reports')
     .addSecurity('bearerAuth', {
       type: 'http',
       scheme: 'bearer',
