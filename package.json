@@ -21,7 +21,8 @@
     "start:auth-service": "nest start auth-service",
     "start:user-service": "nest start user-service",
     "start:self-service": "nest start self-service",
-    "start:ontime-service": "nest start ontime-service"
+    "start:ontime-service": "nest start ontime-service",
+    "test": "jest"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -48,6 +49,7 @@
     "jwks-rsa": "^4.0.1",
     "nats": "^2.29.3",
     "prisma": "^7.8.0",
+    "puppeteer": "^25.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

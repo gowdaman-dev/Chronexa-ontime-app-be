@@ -3,6 +3,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiParam,
   ApiProperty,
   ApiPropertyOptions,
   ApiResponse,
@@ -365,6 +366,88 @@ const simpleOperationExamples: Record<string, JsonExample> = {
       { ...manualTransactionSample, employee_manual_transaction_id: 2153 },
     ],
   },
+  'List all leave types': paginatedExample([
+    { leave_type_id: 1, leave_type_code: 'AL', leave_type_eng: 'Annual Leave', status_flag: true },
+  ]),
+  'List active leave types': paginatedExample([
+    { leave_type_id: 1, leave_type_code: 'AL', leave_type_eng: 'Annual Leave', status_flag: true },
+  ]),
+  'Leave type dropdown list': paginatedExample([
+    { leave_type_id: 1, leave_type_eng: 'Annual Leave' },
+  ]),
+  'Get leave type by ID': simpleDataExample({
+    leave_type_id: 1,
+    leave_type_code: 'AL',
+    leave_type_eng: 'Annual Leave',
+  }),
+  'Create leave type': { message: 'Leave type created successfully', data: { leave_type_id: 1 } },
+  'Update leave type': { message: 'Leave type updated successfully', data: { leave_type_id: 1 } },
+  'Delete leave type by ID': { message: 'Leave type deleted successfully', leave_type_id: 1 },
+  'Bulk delete leave types': { status: true, message: 'Leave types deleted successfully (2 deleted)' },
+  'List all permission types': paginatedExample([
+    { permission_type_id: 1, permission_type_code: 'PERM', permission_type_eng: 'Personal' },
+  ]),
+  'List active permission types': paginatedExample([
+    { permission_type_id: 1, permission_type_eng: 'Personal', status_flag: true },
+  ]),
+  'Permission types by gender': paginatedExample([
+    { permission_type_id: 1, specific_gender: 'M' },
+  ]),
+  'Search permission types': paginatedExample([
+    { permission_type_id: 1, permission_type_eng: 'Personal' },
+  ]),
+  'Get permission type by ID': simpleDataExample({ permission_type_id: 1 }),
+  'Create permission type': { message: 'Permission type created successfully', data: { permission_type_id: 1 } },
+  'Update permission type': { message: 'Permission type updated successfully', data: { permission_type_id: 1 } },
+  'Delete permission type by ID': { message: 'Permission type deleted successfully', permission_type_id: 1 },
+  'Bulk delete permission types': {
+    status: true,
+    message: 'Permission types deleted successfully (2 deleted)',
+  },
+  'List all holidays': paginatedExample([
+    { holiday_id: 1, holiday_eng: 'National Day', from_date: '2025-12-02', to_date: '2025-12-02' },
+  ]),
+  'Upcoming holidays': paginatedExample([
+    { holiday_id: 1, holiday_eng: 'National Day', from_date: '2025-12-02' },
+  ]),
+  'Search holidays': paginatedExample([{ holiday_id: 1, holiday_eng: 'National Day' }]),
+  'Get holiday by ID': simpleDataExample({ holiday_id: 1, holiday_eng: 'National Day' }),
+  'Create holiday': { message: 'Holiday created successfully', data: { holiday_id: 1 } },
+  'Update holiday': { message: 'Holiday updated successfully', data: { holiday_id: 1 } },
+  'Delete holiday by ID': { message: 'Holiday deleted successfully', holiday_id: 1 },
+  'Bulk delete holidays': { status: true, message: 'Holidays deleted successfully (2 deleted)' },
+  'Create employee event transaction': {
+    message: 'Employee event transaction created successfully',
+    data: { transaction_id: 12345, reason: 'IN' },
+  },
+  'Create event transaction by employee number (subject_id)': {
+    message: 'Employee event transaction created successfully',
+    data: { transaction_id: 12346, reason: 'OUT' },
+  },
+  'List all event transactions': paginatedExample([
+    { transaction_id: 12345, employee_id: 1001, reason: 'IN' },
+  ]),
+  'Get event transaction by ID': simpleDataExample({ transaction_id: 12345, reason: 'IN' }),
+  'Event transactions by employee': paginatedExample([{ transaction_id: 12345 }]),
+  'Team event transactions': paginatedExample([{ transaction_id: 12345 }]),
+  'Update event transaction': { message: 'Employee event transaction updated successfully' },
+  'Delete event transaction by ID': { message: 'Transaction deleted successfully', transaction_id: 12345 },
+  'Bulk delete event transactions': { status: true, message: 'Transactions deleted successfully (2 deleted)' },
+  'My last event transaction': simpleDataExample({ transaction_id: 12345, reason: 'IN' }),
+  'Last event transaction by employee': simpleDataExample({ transaction_id: 12345 }),
+  'Current punch status': simpleDataExample({ status: 'IN', last_transaction: '2026-06-10T09:00:00.000Z' }),
+  'Today schedule and holiday status': simpleDataExample({
+    employee_id: 1001,
+    date: '2026-06-10',
+    schedule_id: 5,
+    holidays: [],
+  }),
+  'Daily attendance report from sp_employee_daily_report': paginatedExample([
+    { EmployeeID: 1001, WorkDate: '2026-06-10', PunchIn: '09:00', PunchOut: '17:30' },
+  ]),
+  'Daily report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
+  'Weekly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
+  'Monthly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
 };
 
 function getSimpleOperationExample(summary: string): JsonExample {
@@ -477,8 +560,14 @@ export function ApiIdsVerifyEncounterOperation() {
 }
 
 export function ApiSimpleSelfServiceReadOperation(summary: string) {
+  return ApiSelfServiceOperation(summary);
+}
+
+/** Self-service operation with optional Swagger extras (filters, params, body). */
+export function ApiSelfServiceOperation(summary: string, ...extras: MethodDecorator[]) {
   return applyDecorators(
     ApiOperation({ summary }),
+    ...extras,
     apiJsonResponse(
       200,
       'Request completed successfully',
@@ -488,6 +577,272 @@ export function ApiSimpleSelfServiceReadOperation(summary: string) {
     apiErrorResponse(401, 'Missing or invalid access token', 'Unauthorized'),
     apiErrorResponse(404, 'Resource not found', 'Resource not found'),
     apiErrorResponse(500, 'Unexpected backend error', 'Internal server error'),
+  );
+}
+
+export function ApiSelfServiceIdParam(name = 'id', description = 'Record ID') {
+  return applyDecorators(ApiParam({ name, type: Number, example: 1, description }));
+}
+
+export function ApiSelfServiceEmployeeIdParam() {
+  return applyDecorators(
+    ApiParam({ name: 'employeeId', type: Number, example: 1001, description: 'Employee ID' }),
+  );
+}
+
+export function ApiSelfServiceGenderParam() {
+  return applyDecorators(
+    ApiParam({ name: 'gender', type: String, example: 'M', description: 'Gender code: M or F' }),
+  );
+}
+
+export function ApiBulkDeleteBody(entityName: string) {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['ids'],
+        properties: {
+          ids: {
+            type: 'array',
+            items: { type: 'number' },
+            example: [1, 2],
+            description: `${entityName} IDs to delete`,
+          },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiApproveRejectBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['approve_reject_flag'],
+        properties: {
+          approve_reject_flag: {
+            type: 'number',
+            example: 1,
+            description: '1=approve, 2=reject',
+          },
+          approver_remarks: { type: 'string', example: 'Approved' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiGroupApproveTransactionsBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['transaction_time', 'reason'],
+        properties: {
+          transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
+          reason: { type: 'string', example: 'IN' },
+          employee_ids: { type: 'array', items: { type: 'number' }, example: [1001, 1002] },
+          remarks: { type: 'string', example: 'Group punch' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiGroupApproveByEmployeeIdsBody() {
+  return applyDecorators(
+    ApiConsumes('multipart/form-data'),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['employee_ids', 'reason', 'transaction_time', 'attachment'],
+        properties: {
+          employee_ids: { type: 'string', example: '1001,1002' },
+          reason: { type: 'string', example: 'IN' },
+          transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
+          remarks: { type: 'string', example: 'Group manual entry' },
+          attachment: { type: 'string', format: 'binary' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiAddLeaveBody() {
+  return applyDecorators(
+    ApiConsumes('multipart/form-data'),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['leave_type_id', 'from_date', 'to_date'],
+        properties: {
+          leave_type_id: { type: 'number', example: 1 },
+          from_date: { type: 'string', example: '2026-06-10' },
+          to_date: { type: 'string', example: '2026-06-11' },
+          number_of_leaves: { type: 'number', example: 2 },
+          employee_remarks: { type: 'string', example: 'Annual leave' },
+          leave_doc: { type: 'string', format: 'binary' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiAddShortPermissionBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['permission_type_id', 'from_date', 'to_date', 'remarks'],
+        properties: {
+          permission_type_id: { type: 'number', example: 1 },
+          from_date: { type: 'string', example: '2026-06-10' },
+          to_date: { type: 'string', example: '2026-06-10' },
+          from_time: { type: 'string', example: '09:00' },
+          to_time: { type: 'string', example: '10:00' },
+          remarks: { type: 'string', example: 'Doctor appointment' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiAddManualTransactionBody() {
+  return applyDecorators(
+    ApiConsumes('multipart/form-data'),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['employee_id', 'reason', 'transaction_time', 'remarks', 'attachment'],
+        properties: {
+          employee_id: { type: 'number', example: 1001 },
+          reason: { type: 'string', example: 'IN' },
+          transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
+          remarks: { type: 'string', example: 'Forgot to punch' },
+          emp_missing_movement_id: { type: 'number', example: 501 },
+          attachment: { type: 'string', format: 'binary' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiAddEventTransactionBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['employee_id', 'reason', 'transaction_time'],
+        properties: {
+          employee_id: { type: 'number', example: 1001 },
+          reason: { type: 'string', example: 'IN' },
+          transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
+          remarks: { type: 'string', example: 'Manual entry' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiAddEventTransactionSubjectBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['subject_id', 'reason', 'transaction_time'],
+        properties: {
+          subject_id: { type: 'string', example: 'E001', description: 'Employee number (emp_no)' },
+          reason: { type: 'string', example: 'OUT' },
+          transaction_time: { type: 'string', example: '2026-06-10T17:30:00' },
+          remarks: { type: 'string', example: 'Manual OUT' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiVerifyEventTransactionBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['employee_id', 'reason', 'time_stamp', 'coordinates'],
+        properties: {
+          employee_id: { type: 'number', example: 1001 },
+          reason: { type: 'string', enum: ['IN', 'OUT'], example: 'IN' },
+          time_stamp: {
+            type: 'string',
+            example: '2026-06-10T08:00:00',
+            description: 'ISO 8601 date-time',
+          },
+          coordinates: {
+            type: 'array',
+            items: { type: 'number' },
+            minItems: 2,
+            maxItems: 2,
+            example: [25.2048, 55.2708],
+            description: '[latitude, longitude]',
+          },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiLeaveTypeBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          leave_type_code: { type: 'string', example: 'AL' },
+          leave_type_eng: { type: 'string', example: 'Annual Leave' },
+          leave_type_arb: { type: 'string', example: 'Annual Leave AR' },
+          status_flag: { type: 'boolean', example: true },
+          need_approval_flag: { type: 'boolean', example: true },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiPermissionTypeBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          permission_type_code: { type: 'string', example: 'PERM' },
+          permission_type_eng: { type: 'string', example: 'Personal Permission' },
+          permission_type_arb: { type: 'string', example: 'Personal AR' },
+          status_flag: { type: 'boolean', example: true },
+          max_perm_per_day: { type: 'number', example: 1 },
+          max_minutes_per_day: { type: 'number', example: 60 },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiHolidayBody() {
+  return applyDecorators(
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['holiday_eng', 'from_date', 'to_date'],
+        properties: {
+          holiday_eng: { type: 'string', example: 'National Day' },
+          holiday_arb: { type: 'string', example: 'National Day AR' },
+          from_date: { type: 'string', example: '2025-12-02' },
+          to_date: { type: 'string', example: '2025-12-02' },
+          recurring_flag: { type: 'boolean', example: false },
+          public_holiday_flag: { type: 'boolean', example: true },
+          remarks: { type: 'string', example: 'Public holiday' },
+        },
+      },
+    }),
   );
 }
 

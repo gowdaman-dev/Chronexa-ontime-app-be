@@ -39,9 +39,7 @@ export class MissingMovementsService {
 
   private whereFromQuery(query: Record<string, any> = {}, managerId?: number) {
     const where: any = {};
-    const employeeId =
-      this.common.toNumber(query.employeeId) ??
-      this.common.toNumber(query.employee_id);
+    const employeeId = this.common.resolveEmployeeId(query);
     if (employeeId) where.Employee_Id = employeeId;
     const dateFilter = this.common.dateFilter(query.from_date, query.to_date);
     if (dateFilter) where.TransDate = dateFilter;
@@ -55,13 +53,15 @@ export class MissingMovementsService {
         { employee_master: { emp_no: { contains: search } } },
       ];
     }
-    if (managerId || query.department_id) {
-      where.employee_master = {
-        ...(managerId ? { manager_id: managerId } : {}),
-        ...(query.department_id
-          ? { department_id: Number(query.department_id) }
-          : {}),
-      };
+    const organizationId = this.common.toNumber(query.organization_id);
+    const employeeMasterFilter: any = {};
+    if (managerId) employeeMasterFilter.manager_id = managerId;
+    if (query.department_id) {
+      employeeMasterFilter.department_id = Number(query.department_id);
+    }
+    if (organizationId) employeeMasterFilter.organization_id = organizationId;
+    if (Object.keys(employeeMasterFilter).length) {
+      where.employee_master = employeeMasterFilter;
     }
     return where;
   }
