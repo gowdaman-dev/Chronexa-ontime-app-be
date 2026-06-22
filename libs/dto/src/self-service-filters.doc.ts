@@ -1,6 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
 
+/**
+ * Creates a Swagger query parameter decorator.
+ *
+ * @returns An ApiQuery decorator.
+ */
 function q(
   name: string,
   description: string,
@@ -15,7 +20,11 @@ function q(
   });
 }
 
-/** limit + offset (offset is 1-based page number). */
+/**
+ * Provides pagination query parameter documentation for Swagger.
+ *
+ * @returns A composed decorator configuring `limit` (records per page) and `offset` (1-based page number) query parameters.
+ */
 export function ApiPaginationFilters() {
   return applyDecorators(
     q('limit', 'Records per page', { type: 'number', example: 10 }),
@@ -23,6 +32,9 @@ export function ApiPaginationFilters() {
   );
 }
 
+/**
+ * Applies Swagger query decorators for leave list filtering.
+ */
 export function ApiLeaveListFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -47,6 +59,11 @@ export function ApiLeaveListFilters() {
   );
 }
 
+/**
+ * Applies Swagger documentation for permission list query parameters.
+ *
+ * @returns A class decorator composing pagination and permission-specific filter parameters
+ */
 export function ApiShortPermissionListFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -62,6 +79,11 @@ export function ApiShortPermissionListFilters() {
   );
 }
 
+/**
+ * Composes Swagger query parameter decorators for missing movement filtering.
+ *
+ * @returns A decorator that documents query parameters for missing movement list endpoints.
+ */
 export function ApiMissingMovementFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -76,6 +98,9 @@ export function ApiMissingMovementFilters() {
   );
 }
 
+/**
+ * Applies Swagger query parameter decorators for manual transaction list filtering.
+ */
 export function ApiManualTransactionFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -86,6 +111,9 @@ export function ApiManualTransactionFilters() {
   );
 }
 
+/**
+ * Configures Swagger documentation for event transaction query parameters.
+ */
 export function ApiEventTransactionFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -103,6 +131,13 @@ export function ApiEventTransactionFilters() {
   );
 }
 
+/**
+ * Documents query parameters for the today status endpoint.
+ *
+ * Configures `employee_id` (required), `employeeId` (alias), and an optional `date` parameter.
+ *
+ * @returns A decorator that applies the query parameter documentation.
+ */
 export function ApiTodayStatusFilters() {
   return applyDecorators(
     q('employee_id', 'Employee ID (required)', { type: 'number', example: 1001, required: true }),
@@ -111,6 +146,11 @@ export function ApiTodayStatusFilters() {
   );
 }
 
+/**
+ * Composes Swagger decorators for leave type list query parameters.
+ *
+ * Configures documentation for pagination (limit, offset), search by leave type code or name, and active/inactive status filtering.
+ */
 export function ApiLeaveTypeFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -119,6 +159,9 @@ export function ApiLeaveTypeFilters() {
   );
 }
 
+/**
+ * Composes Swagger decorators for permission type list query parameters.
+ */
 export function ApiPermissionTypeFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -130,6 +173,11 @@ export function ApiPermissionTypeFilters() {
   );
 }
 
+/**
+ * Composes Swagger query decorators for holiday list endpoints.
+ *
+ * @returns A decorator that documents query parameters for searching and filtering holidays.
+ */
 export function ApiHolidayFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -144,10 +192,20 @@ export function ApiHolidayFilters() {
   );
 }
 
+/**
+ * Composes query decorators for filtering upcoming holidays by day count.
+ *
+ * @returns A decorator that documents the `days` query parameter.
+ */
 export function ApiHolidayUpcomingFilters() {
   return applyDecorators(q('days', 'Number of days ahead', { type: 'number', example: 30 }));
 }
 
+/**
+ * Configures Swagger documentation for report filter query parameters.
+ *
+ * @returns A NestJS decorator composing report filter query parameters.
+ */
 export function ApiReportFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
@@ -174,12 +232,20 @@ export function ApiReportFilters() {
   );
 }
 
+/**
+ * Composes Swagger decorators documenting the required manual transaction ID query parameter for approval endpoints.
+ */
 export function ApiManualTransactionApproveQuery() {
   return applyDecorators(
     q('id', 'Manual transaction ID to approve', { type: 'number', example: 2152, required: true }),
   );
 }
 
+/**
+ * Configures Swagger documentation for the manual transaction reject query parameter.
+ *
+ * @returns A decorator that documents the required `id` query parameter.
+ */
 export function ApiManualTransactionRejectQuery() {
   return applyDecorators(
     q('id', 'Manual transaction ID to reject', { type: 'number', example: 2152, required: true }),

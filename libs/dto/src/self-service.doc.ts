@@ -450,6 +450,12 @@ const simpleOperationExamples: Record<string, JsonExample> = {
   'Monthly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
 };
 
+/**
+ * Retrieves an example response for the specified operation summary.
+ *
+ * @param summary - The operation summary to look up in the examples catalog
+ * @returns An example response object; if the summary is not found, a generic fallback response with `success: true`, a standard message, and empty data
+ */
 function getSimpleOperationExample(summary: string): JsonExample {
   return (
     simpleOperationExamples[summary] ?? {
@@ -520,6 +526,11 @@ export function ApiIdsPunchOperation() {
   );
 }
 
+/**
+ * Decorates an endpoint for face recognition 1:1 verification using IDS server.
+ *
+ * @returns A method decorator that applies Swagger documentation with operation summary, multipart request schema, and response examples.
+ */
 export function ApiIdsVerifyEncounterOperation() {
   return applyDecorators(
     ApiOperation({ summary: 'Face recognition 1:1 verification using IDS server' }),
@@ -559,11 +570,22 @@ export function ApiIdsVerifyEncounterOperation() {
   );
 }
 
+/**
+ * Applies Swagger decorators for a self-service read operation.
+ *
+ * @param summary - Operation summary to display in the API documentation
+ */
 export function ApiSimpleSelfServiceReadOperation(summary: string) {
   return ApiSelfServiceOperation(summary);
 }
 
-/** Self-service operation with optional Swagger extras (filters, params, body). */
+/**
+ * Standardizes Swagger documentation for self-service API operations.
+ *
+ * @param summary - The operation summary displayed in Swagger UI
+ * @param extras - Optional Swagger method decorators (e.g., params, body schemas)
+ * @returns A composite Swagger decorator with standard response documentation
+ */
 export function ApiSelfServiceOperation(summary: string, ...extras: MethodDecorator[]) {
   return applyDecorators(
     ApiOperation({ summary }),
@@ -580,22 +602,42 @@ export function ApiSelfServiceOperation(summary: string, ...extras: MethodDecora
   );
 }
 
+/**
+ * Generates a decorator for documenting a numeric ID parameter in Swagger.
+ *
+ * @param name - The parameter name in the endpoint. Defaults to `'id'`.
+ * @param description - The Swagger description for the parameter. Defaults to `'Record ID'`.
+ * @returns A decorator that documents the ID parameter.
+ */
 export function ApiSelfServiceIdParam(name = 'id', description = 'Record ID') {
   return applyDecorators(ApiParam({ name, type: Number, example: 1, description }));
 }
 
+/**
+ * Adds Swagger documentation for an `employeeId` path parameter.
+ *
+ * @returns A decorator that documents `employeeId` as a numeric identifier with example `1001`.
+ */
 export function ApiSelfServiceEmployeeIdParam() {
   return applyDecorators(
     ApiParam({ name: 'employeeId', type: Number, example: 1001, description: 'Employee ID' }),
   );
 }
 
+/**
+ * Applies standardized Swagger documentation for a gender path parameter.
+ */
 export function ApiSelfServiceGenderParam() {
   return applyDecorators(
     ApiParam({ name: 'gender', type: String, example: 'M', description: 'Gender code: M or F' }),
   );
 }
 
+/**
+ * Documents a bulk delete request body with an array of entity IDs.
+ *
+ * @param entityName - The name of the entity being deleted, incorporated into the field description.
+ */
 export function ApiBulkDeleteBody(entityName: string) {
   return applyDecorators(
     ApiBody({
@@ -615,6 +657,11 @@ export function ApiBulkDeleteBody(entityName: string) {
   );
 }
 
+/**
+ * Documents the request body schema for an approval/rejection operation.
+ *
+ * @returns A decorator that adds Swagger API body schema documentation requiring an `approve_reject_flag` field (1=approve, 2=reject) and an optional `approver_remarks` string.
+ */
 export function ApiApproveRejectBody() {
   return applyDecorators(
     ApiBody({
@@ -634,6 +681,11 @@ export function ApiApproveRejectBody() {
   );
 }
 
+/**
+ * Documents the request body schema for approving a group of transactions.
+ *
+ * @returns A decorator that documents the request body for group transaction approval.
+ */
 export function ApiGroupApproveTransactionsBody() {
   return applyDecorators(
     ApiBody({
@@ -651,6 +703,12 @@ export function ApiGroupApproveTransactionsBody() {
   );
 }
 
+/**
+ * Documents a request body for group approval operations by employee IDs with file attachment.
+ *
+ * Specifies required fields: comma-separated employee IDs, reason, transaction time, and binary attachment file,
+ * plus optional remarks.
+ */
 export function ApiGroupApproveByEmployeeIdsBody() {
   return applyDecorators(
     ApiConsumes('multipart/form-data'),
@@ -670,6 +728,11 @@ export function ApiGroupApproveByEmployeeIdsBody() {
   );
 }
 
+/**
+ * Documents the request body schema for creating a leave record.
+ *
+ * Specifies multipart form data consumption with required fields for leave type ID and date range, plus optional remarks and document attachment.
+ */
 export function ApiAddLeaveBody() {
   return applyDecorators(
     ApiConsumes('multipart/form-data'),
@@ -690,6 +753,9 @@ export function ApiAddLeaveBody() {
   );
 }
 
+/**
+ * Documents the request body schema for adding a short permission.
+ */
 export function ApiAddShortPermissionBody() {
   return applyDecorators(
     ApiBody({
@@ -709,6 +775,11 @@ export function ApiAddShortPermissionBody() {
   );
 }
 
+/**
+ * Documents the request body for manually adding a transaction.
+ *
+ * Specifies an employee ID, reason, transaction time, remarks, and attachment file as required, with an optional missing movement ID.
+ */
 export function ApiAddManualTransactionBody() {
   return applyDecorators(
     ApiConsumes('multipart/form-data'),
@@ -729,6 +800,11 @@ export function ApiAddManualTransactionBody() {
   );
 }
 
+/**
+ * Adds request body schema documentation for creating an event transaction.
+ *
+ * Requires `employee_id`, `reason`, and `transaction_time`. Includes optional `remarks`.
+ */
 export function ApiAddEventTransactionBody() {
   return applyDecorators(
     ApiBody({
@@ -746,6 +822,9 @@ export function ApiAddEventTransactionBody() {
   );
 }
 
+/**
+ * Documents the request body for adding an event transaction using a subject identifier.
+ */
 export function ApiAddEventTransactionSubjectBody() {
   return applyDecorators(
     ApiBody({
@@ -763,6 +842,11 @@ export function ApiAddEventTransactionSubjectBody() {
   );
 }
 
+/**
+ * Documents the request body schema for event transaction verification.
+ *
+ * Specifies required fields for employee ID, punch reason (IN/OUT), transaction timestamp (ISO 8601), and geographic coordinates.
+ */
 export function ApiVerifyEventTransactionBody() {
   return applyDecorators(
     ApiBody({
@@ -791,6 +875,9 @@ export function ApiVerifyEventTransactionBody() {
   );
 }
 
+/**
+ * Documents the request body schema for leave type operations.
+ */
 export function ApiLeaveTypeBody() {
   return applyDecorators(
     ApiBody({
@@ -808,6 +895,9 @@ export function ApiLeaveTypeBody() {
   );
 }
 
+/**
+ * Applies Swagger schema documentation for permission type request bodies.
+ */
 export function ApiPermissionTypeBody() {
   return applyDecorators(
     ApiBody({
@@ -826,6 +916,9 @@ export function ApiPermissionTypeBody() {
   );
 }
 
+/**
+ * Documents a holiday request body schema for Swagger endpoints.
+ */
 export function ApiHolidayBody() {
   return applyDecorators(
     ApiBody({
@@ -846,6 +939,11 @@ export function ApiHolidayBody() {
   );
 }
 
+/**
+ * Creates Swagger decorators for an endpoint that retrieves recent employee transactions.
+ *
+ * @returns A method decorator that applies operation metadata, response schema, and error response definitions.
+ */
 export function ApiLastTransactionsOperation() {
   return applyDecorators(
     ApiOperation({

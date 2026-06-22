@@ -15,6 +15,11 @@ export function ApiPaginatedResponse(dataType: string) {
   );
 }
 
+/**
+ * Creates a decorator that documents pagination query parameters.
+ *
+ * @returns A decorator that attaches Swagger documentation for the `limit` and `offset` query parameters.
+ */
 export function ApiPaginationQueryParams() {
   return applyDecorators(
     ApiQuery({ name: 'limit', type: Number, required: false, example: 20, description: 'Number of records per page' }),
