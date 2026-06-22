@@ -40,15 +40,7 @@ export class ReportsService {
     return this.run(period, async () => {
       const range = this.reportQuery.resolveDateRange(period, payload.query ?? {});
       const format = String(payload.query?.format ?? 'json').toLowerCase();
-      const query =
-        format === 'pdf' || format === 'html'
-          ? {
-              ...(payload.query ?? {}),
-              ...range,
-              limit: payload.query?.limit ?? 1000,
-              offset: payload.query?.offset ?? 1,
-            }
-          : { ...(payload.query ?? {}), ...range };
+      const query = { ...(payload.query ?? {}), ...range };
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
       const title = `${period.toUpperCase()} ATTENDANCE REPORT`;

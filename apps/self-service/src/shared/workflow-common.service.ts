@@ -38,6 +38,22 @@ export class WorkflowCommonService {
     return { limit, offset, skip: (offset - 1) * limit, take: limit };
   }
 
+  /** Reports/attendance: omit limit (or limit=0 / limit=all) to fetch every matching row. */
+  parseReportPagination(query: Record<string, any> = {}) {
+    const raw = query.limit;
+    const unlimited =
+      raw === undefined ||
+      raw === null ||
+      raw === '' ||
+      String(raw).toLowerCase() === 'all' ||
+      this.toNumber(raw) === 0;
+    if (unlimited) {
+      return { unlimited: true as const, offset: 1, skip: 0, take: 0 };
+    }
+    const { limit, offset, skip, take } = this.parsePagination(query);
+    return { unlimited: false as const, limit, offset, skip, take };
+  }
+
   parseDate(value: any): Date | undefined {
     if (!value) return undefined;
     const parsed = new Date(value);

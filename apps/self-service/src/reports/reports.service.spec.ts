@@ -79,4 +79,13 @@ describe('ReportsService', () => {
       hasNext: false,
     });
   });
+
+  it('does not inject a default limit for pdf export', async () => {
+    await service.daily({
+      user: { employeeId: 100, role: 'Admin' },
+      query: { format: 'pdf', date: '2025-06-01' },
+    });
+    const [query] = reportQuery.querySpEmployeeDailyReport.mock.calls.at(-1);
+    expect(query.limit).toBeUndefined();
+  });
 });
