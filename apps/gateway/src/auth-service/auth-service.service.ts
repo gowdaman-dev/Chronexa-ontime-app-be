@@ -20,9 +20,9 @@ export class AuthServiceService implements IAuthService {
     );
   }
 
-  async validateToken(token: string): Promise<TokenValidationResult> {
+  async validateToken(token: string, userAgent?: string): Promise<TokenValidationResult> {
     try {
-      const payload: any = await this.send('auth.validate_token', { token });
+      const payload: any = await this.send('auth.validate_token', { token, userAgent });
       if (!payload || !payload.userId) {
         return { valid: false, message: 'Invalid or expired token' };
       }
@@ -35,8 +35,13 @@ export class AuthServiceService implements IAuthService {
         isADUser: payload.isADUser ?? false,
       };
       return { valid: true, user };
-    } catch {
-      return { valid: false, message: 'Token validation failed' };
+    } catch (err: any) {
+      const message =
+        err?.response?.message ??
+        (Array.isArray(err?.response?.message) ? err.response.message[0] : undefined) ??
+        err?.message ??
+        'Token validation failed';
+      return { valid: false, message };
     }
   }
 
