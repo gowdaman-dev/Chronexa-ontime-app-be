@@ -36,12 +36,14 @@ describe('HolidaysService', () => {
   });
 
   it('returns paginated holidays with year filter', async () => {
-    prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
-    prisma.holidays.count.mockResolvedValue(1);
+    prisma.holidays.findMany.mockResolvedValue([
+      { holiday_id: 1, from_date: new Date('2025-06-01') },
+      { holiday_id: 2, from_date: new Date('2024-06-01') },
+    ]);
 
     await expect(service.all({ query: { year: 2025 } })).resolves.toEqual({
       success: true,
-      data: [{ holiday_id: 1 }],
+      data: [{ holiday_id: 1, from_date: new Date('2025-06-01') }],
       total: 1,
       hasNext: false,
     });

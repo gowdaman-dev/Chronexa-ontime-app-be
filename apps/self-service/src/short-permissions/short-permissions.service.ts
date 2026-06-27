@@ -69,7 +69,56 @@ export class ShortPermissionsService {
     return this.common.parseDate(`${datePart}T${normalizedTime}.000Z`);
   }
 
-  private whereFromQuery(query: Record<string, any> = {}) {
+  private permissionEmployeeRelationKey =
+    'employee_master_employee_short_permissions_employee_idToemployee_master';
+
+  private whereFromSearch(
+    query: Record<string, any> = {},
+    user?: { role?: string },
+    allowedOrgIds?: number[],
+  ) {
+    const where: any = {};
+    const status =
+      this.common.toNumber(query.status) ??
+      this.common.toNumber(query.approve_reject_flag);
+    if (status !== undefined) where.approve_reject_flag = status;
+
+    if (query.from_date || query.to_date) {
+      const range = this.common.dateFilter(query.from_date, query.to_date);
+      if (range) where.from_date = range;
+    }
+
+    if (query.employee_number || query.employee_name) {
+      where[this.permissionEmployeeRelationKey] = {
+        ...(query.employee_number
+          ? { emp_no: { contains: String(query.employee_number) } }
+          : {}),
+        ...(query.employee_name
+          ? {
+              OR: [
+                { firstname_eng: { contains: String(query.employee_name) } },
+                { lastname_eng: { contains: String(query.employee_name) } },
+                { firstname_arb: { contains: String(query.employee_name) } },
+                { lastname_arb: { contains: String(query.employee_name) } },
+              ],
+            }
+          : {}),
+      };
+    }
+
+    return this.common.applyEmployeeOrgScope(
+      where,
+      this.permissionEmployeeRelationKey,
+      user,
+      allowedOrgIds,
+    );
+  }
+
+  private whereFromQuery(
+    query: Record<string, any> = {},
+    user?: { role?: string },
+    allowedOrgIds?: number[],
+  ) {
     const where: any = {};
     const employeeId = this.common.toNumber(query.employee_id);
     const managerId = this.common.toNumber(query.manager_id);
@@ -84,7 +133,7 @@ export class ShortPermissionsService {
     }
     if (query.employee_number || query.employee_name || query.search || managerId) {
       const search = query.employee_name ?? query.search;
-      where.employee_master_employee_short_permissions_employee_idToemployee_master = {
+      where[this.permissionEmployeeRelationKey] = {
         ...(managerId ? { manager_id: managerId } : {}),
         ...(query.employee_number
           ? { emp_no: { contains: String(query.employee_number) } }
@@ -102,7 +151,12 @@ export class ShortPermissionsService {
           : {}),
       };
     }
-    return where;
+    return this.common.applyEmployeeOrgScope(
+      where,
+      this.permissionEmployeeRelationKey,
+      user,
+      allowedOrgIds,
+    );
   }
 
   async add(payload: { user: any; body: any }) {
@@ -166,10 +220,14 @@ export class ShortPermissionsService {
     });
   }
 
-  async all(payload: { query: any }) {
+  async all(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
     return this.run('all', async () => {
       const { skip, take } = this.common.parsePagination(payload.query);
-      const where = this.whereFromQuery(payload.query);
+      const where = this.whereFromQuery(
+        payload.query,
+        payload.user,
+        payload.allowedOrgIds,
+      );
       const [data, total] = await Promise.all([
         this.prisma.employee_short_permissions.findMany({
           where,
@@ -184,12 +242,34 @@ export class ShortPermissionsService {
     });
   }
 
-  pending(payload: { query: any }) {
-    return this.all({ query: { ...(payload.query ?? {}), approve_reject_flag: 0 } });
+  pending(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
+    return this.all({
+      query: { ...(payload.query ?? {}), approve_reject_flag: 0 },
+      user: payload.user,
+      allowedOrgIds: payload.allowedOrgIds,
+    });
   }
 
-  search(payload: { query: any }) {
-    return this.all(payload);
+  search(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
+    return this.run('search', async () => {
+      const { skip, take } = this.common.parsePagination(payload.query);
+      const where = this.whereFromSearch(
+        payload.query,
+        payload.user,
+        payload.allowedOrgIds,
+      );
+      const [data, total] = await Promise.all([
+        this.prisma.employee_short_permissions.findMany({
+          where,
+          skip,
+          take,
+          orderBy: { short_permission_id: 'desc' },
+          include: this.include(),
+        }),
+        this.prisma.employee_short_permissions.count({ where }),
+      ]);
+      return { success: true, data, total, hasNext: skip + data.length < total };
+    });
   }
 
   async get(payload: { id: number }) {
@@ -210,12 +290,14 @@ export class ShortPermissionsService {
     });
   }
 
-  teamAll(payload: { user: any; query: any }) {
+  teamAll(payload: { user: any; query: any; allowedOrgIds?: number[] }) {
     return this.all({
       query: {
         ...(payload.query ?? {}),
         manager_id: Number(payload.user?.employeeId),
       },
+      user: payload.user,
+      allowedOrgIds: payload.allowedOrgIds,
     });
   }
 

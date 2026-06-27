@@ -10,6 +10,10 @@ describe('ReportsService', () => {
         from_date: '2025-06-01',
         to_date: '2025-06-07',
       })),
+      reportDateMeta: jest.fn(() => ({
+        from_date: '2025-06-01',
+        to_date: '2025-06-07',
+      })),
       querySpEmployeeDailyReport: jest.fn().mockResolvedValue({
         data: [{ EmployeeID: 100 }],
         total: 1,

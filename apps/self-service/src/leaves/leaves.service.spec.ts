@@ -30,6 +30,12 @@ describe('LeavesService', () => {
       parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       dateFilter: jest.fn(),
+      mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
+      buildLeaveAllDateFilter: jest.fn(() => ({})),
+      buildLeaveTeamDateFilter: jest.fn(() => ({})),
+      buildLeaveEmployeeGetDateFilter: jest.fn(() => ({})),
+      applyEmployeeOrgScope: jest.fn((where: any) => where),
+      isAdminRole: jest.fn(() => false),
       compact: jest.fn((value: any) =>
         Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
       ),
