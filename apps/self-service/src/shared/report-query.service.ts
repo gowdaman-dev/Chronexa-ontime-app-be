@@ -138,6 +138,21 @@ export class ReportQueryService {
     };
   }
 
+  /** Attendance report: honor from_date + to_date from query (old /report/attendance behaviour). */
+  resolveAttendanceDateRange(query: Record<string, any> = {}) {
+    if (query.date) {
+      const day = String(query.date).slice(0, 10);
+      return { from_date: day, to_date: day };
+    }
+    const from = query.from_date ? String(query.from_date).slice(0, 10) : undefined;
+    const to = query.to_date ? String(query.to_date).slice(0, 10) : undefined;
+    if (from && to) return { from_date: from, to_date: to };
+    if (from) return { from_date: from, to_date: from };
+    if (to) return { from_date: to, to_date: to };
+    const today = new Date().toISOString().slice(0, 10);
+    return { from_date: today, to_date: today };
+  }
+
   buildReportHtml(title: string, rows: any[], meta?: { from_date?: string; to_date?: string; total?: number }) {
     const displayRows = rows;
     const headers =
