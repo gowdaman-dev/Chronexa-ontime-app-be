@@ -10,3 +10,4 @@ export * from './decorators/current-user.decorator';
 export * from './decorators/employee-type.decorator';
 export * from './interfaces/auth-user.interface';
 export * from './interfaces/auth-service.interface';
+export * from './utils/app-client.util';

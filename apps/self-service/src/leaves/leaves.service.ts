@@ -54,8 +54,38 @@ export class LeavesService {
     }
   }
 
-  private whereFromQuery(query: Record<string, any> = {}) {
-    const where: any = {};
+  private employeeRelationKey =
+    'employee_master_employee_leaves_employee_idToemployee_master';
+
+  private async assertEmployeeOrgAccess(
+    employeeId: number,
+    user?: { role?: string },
+    allowedOrgIds?: number[],
+  ) {
+    if (this.common.isAdminRole(user)) return;
+    const employee = await this.prisma.employee_master.findUnique({
+      where: { employee_id: employeeId },
+      select: { organization_id: true },
+    });
+    if (
+      employee?.organization_id &&
+      allowedOrgIds?.length &&
+      !allowedOrgIds.includes(employee.organization_id)
+    ) {
+      this.common.fail(403, 'You do not have permission to view these leaves');
+    }
+  }
+
+  private whereFromQuery(
+    query: Record<string, any> = {},
+    options?: {
+      mode?: 'all' | 'team' | 'employee';
+      user?: { role?: string };
+      allowedOrgIds?: number[];
+    },
+  ) {
+    const mode = options?.mode ?? 'all';
+    let where: any = {};
     const employeeId = this.common.toNumber(query.employee_id);
     const leaveTypeId = this.common.toNumber(query.leave_type_id);
     const managerId = this.common.toNumber(query.manager_id);
@@ -68,44 +98,147 @@ export class LeavesService {
     if (employeeId) where.employee_id = employeeId;
     if (leaveTypeId) where.leave_type_id = leaveTypeId;
     if (leaveStatus !== undefined) where.approve_reject_flag = leaveStatus;
-    if (query.from_date || query.to_date) {
-      where.from_date = this.common.dateFilter(query.from_date, query.to_date);
+    if (
+      query.pending === true ||
+      query.pending === 'true' ||
+      query.pending === '1'
+    ) {
+      where.approve_reject_flag = 0;
     }
+
+    if (mode === 'team') {
+      const teamDate = this.common.buildLeaveTeamDateFilter(
+        query.from_date,
+        query.to_date,
+      );
+      where = this.common.mergeWhere(where, teamDate);
+    } else if (mode === 'employee') {
+      const employeeDate = this.common.buildLeaveEmployeeGetDateFilter(
+        query.from_date,
+        query.to_date,
+      );
+      where = this.common.mergeWhere(where, employeeDate);
+      if (query.search) {
+        where.leave_types = {
+          is: {
+            OR: [
+              { leave_type_eng: { contains: String(query.search) } },
+              { leave_type_arb: { contains: String(query.search) } },
+            ],
+          },
+        };
+      }
+    } else {
+      const listDate = this.common.buildLeaveAllDateFilter(
+        query.from_date,
+        query.to_date,
+      );
+      where = this.common.mergeWhere(where, listDate);
+    }
+
     if (query.transaction_from_date || query.transaction_to_date) {
       where.created_date = this.common.dateFilter(
         query.transaction_from_date,
         query.transaction_to_date,
       );
     }
+
+    if (mode === 'team' && managerId) {
+      const existing = where[this.employeeRelationKey] ?? {};
+      where[this.employeeRelationKey] = { ...existing, manager_id: managerId };
+    }
+
     if (
       query.search ||
       query.employee_number ||
       query.employee_name ||
-      managerId ||
       organizationId ||
       departmentId
     ) {
-      where.employee_master_employee_leaves_employee_idToemployee_master = {
-        ...(managerId ? { manager_id: managerId } : {}),
+      const search = query.employee_name ?? query.search;
+      const employeeFilter: Record<string, any> = {
         ...(organizationId ? { organization_id: organizationId } : {}),
         ...(departmentId ? { department_id: departmentId } : {}),
         ...(query.employee_number
           ? { emp_no: { contains: String(query.employee_number) } }
           : {}),
-        ...(query.employee_name || query.search
-          ? {
-              OR: [
-                { firstname_eng: { contains: String(query.employee_name ?? query.search) } },
-                { lastname_eng: { contains: String(query.employee_name ?? query.search) } },
-                { firstname_arb: { contains: String(query.employee_name ?? query.search) } },
-                { lastname_arb: { contains: String(query.employee_name ?? query.search) } },
-                { emp_no: { contains: String(query.employee_name ?? query.search) } },
-              ],
-            }
-          : {}),
       };
+
+      if (mode === 'team' && search) {
+        where = this.common.mergeWhere(where, {
+          OR: [
+            {
+              [this.employeeRelationKey]: {
+                OR: [
+                  { emp_no: { contains: String(search) } },
+                  { firstname_eng: { contains: String(search) } },
+                  { lastname_eng: { contains: String(search) } },
+                  { firstname_arb: { contains: String(search) } },
+                  { lastname_arb: { contains: String(search) } },
+                ],
+              },
+            },
+            {
+              leave_types: {
+                OR: [
+                  { leave_type_eng: { contains: String(search) } },
+                  { leave_type_arb: { contains: String(search) } },
+                ],
+              },
+            },
+          ],
+        });
+      } else if (search || query.employee_number) {
+        employeeFilter.OR = search
+          ? [
+              { firstname_eng: { contains: String(search) } },
+              { lastname_eng: { contains: String(search) } },
+              { firstname_arb: { contains: String(search) } },
+              { lastname_arb: { contains: String(search) } },
+              { emp_no: { contains: String(search) } },
+            ]
+          : undefined;
+        where[this.employeeRelationKey] = {
+          ...(where[this.employeeRelationKey] ?? {}),
+          ...this.common.compact(employeeFilter),
+        };
+      } else if (Object.keys(employeeFilter).length) {
+        where[this.employeeRelationKey] = {
+          ...(where[this.employeeRelationKey] ?? {}),
+          ...employeeFilter,
+        };
+      }
     }
-    return where;
+
+    return this.common.applyEmployeeOrgScope(
+      where,
+      this.employeeRelationKey,
+      options?.user,
+      options?.allowedOrgIds,
+    );
+  }
+
+  private async listLeaves(
+    query: Record<string, any>,
+    options?: {
+      mode?: 'all' | 'team' | 'employee';
+      user?: { role?: string };
+      allowedOrgIds?: number[];
+    },
+  ) {
+    const { skip, take } = this.common.parsePagination(query);
+    const where = this.whereFromQuery(query, options);
+    const [data, total] = await Promise.all([
+      this.prisma.employee_leaves.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { employee_leave_id: 'desc' },
+        include: this.include(),
+      }),
+      this.prisma.employee_leaves.count({ where }),
+    ]);
+    return { success: true, data, total, hasNext: skip + data.length < total };
   }
 
   async add(payload: { user: any; body: any; file?: any }) {
@@ -167,46 +300,60 @@ export class LeavesService {
     });
   }
 
-  async all(payload: { query: any }) {
+  async all(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
     return this.run('all', async () => {
-      const { skip, take } = this.common.parsePagination(payload.query);
-      const where = this.whereFromQuery(payload.query);
-      const [data, total] = await Promise.all([
-        this.prisma.employee_leaves.findMany({
-          where,
-          skip,
-          take,
-          orderBy: { employee_leave_id: 'desc' },
-          include: this.include(),
-        }),
-        this.prisma.employee_leaves.count({ where }),
-      ]);
-      return { success: true, data, total, hasNext: skip + data.length < total };
+      return this.listLeaves(payload.query ?? {}, {
+        mode: 'all',
+        user: payload.user,
+        allowedOrgIds: payload.allowedOrgIds,
+      });
     });
   }
 
-  async pending(payload: { query: any }) {
+  async pending(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
     return this.all({
       query: { ...(payload.query ?? {}), approve_reject_flag: 0 },
+      user: payload.user,
+      allowedOrgIds: payload.allowedOrgIds,
     });
   }
 
-  async get(payload: { id: number }) {
+  async get(payload: {
+    id: number;
+    query?: any;
+    user?: any;
+    allowedOrgIds?: number[];
+  }) {
     return this.run('get', async () => {
-      const id = Number(payload.id);
-      if (!id) this.common.fail(400, 'Invalid input');
-      const data = await this.prisma.employee_leaves.findUnique({
-        where: { employee_leave_id: id },
-        include: this.include(),
-      });
-      if (!data) this.common.fail(404, 'Employee leave not found');
-      return { success: true, data };
+      const employeeId = Number(payload.id);
+      if (!employeeId) this.common.fail(400, 'Invalid input');
+      await this.assertEmployeeOrgAccess(
+        employeeId,
+        payload.user,
+        payload.allowedOrgIds,
+      );
+      return this.listLeaves(
+        { ...(payload.query ?? {}), employee_id: employeeId },
+        {
+          mode: 'employee',
+          user: payload.user,
+          allowedOrgIds: payload.allowedOrgIds,
+        },
+      );
     });
   }
 
-  async byEmployee(payload: { id: number; query: any }) {
-    return this.all({
-      query: { ...(payload.query ?? {}), employee_id: Number(payload.id) },
+  async byEmployee(payload: {
+    id: number;
+    query: any;
+    user?: any;
+    allowedOrgIds?: number[];
+  }) {
+    return this.get({
+      id: Number(payload.id),
+      query: payload.query,
+      user: payload.user,
+      allowedOrgIds: payload.allowedOrgIds,
     });
   }
 
@@ -217,13 +364,18 @@ export class LeavesService {
     });
   }
 
-  async teamAll(payload: { user: any; query: any }) {
+  async teamAll(payload: { user: any; query: any; allowedOrgIds?: number[] }) {
     return this.run('teamAll', async () => {
       const managerId = Number(payload.user?.employeeId);
       if (!managerId) this.common.fail(400, 'manager_id is required');
-      return this.all({
-        query: { ...(payload.query ?? {}), manager_id: managerId },
-      });
+      return this.listLeaves(
+        { ...(payload.query ?? {}), manager_id: managerId },
+        {
+          mode: 'team',
+          user: payload.user,
+          allowedOrgIds: payload.allowedOrgIds,
+        },
+      );
     });
   }
 

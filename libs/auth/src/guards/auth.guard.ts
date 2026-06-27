@@ -30,7 +30,10 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authorization token');
     }
 
-    const result = await this.authValidator.validateToken(token);
+    const result = await this.authValidator.validateToken(
+      token,
+      request.headers?.['user-agent'],
+    );
 
     if (!result.valid || !result.user) {
       throw new UnauthorizedException(result.message ?? 'Invalid or expired token');
