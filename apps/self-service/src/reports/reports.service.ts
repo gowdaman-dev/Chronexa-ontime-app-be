@@ -16,11 +16,15 @@ export class ReportsService {
   private roleScope(user: any, query: Record<string, any> = {}) {
     const role = String(user?.role ?? '').toLowerCase();
     const explicitEmployeeId = this.common.resolveEmployeeId(query);
+    const ownEmployeeId = Number(user?.employeeId);
     if (role.includes('admin')) return {};
     if (this.common.isManagerRole(user)) {
-      return { managerId: Number(user?.employeeId) };
+      if (explicitEmployeeId && explicitEmployeeId === ownEmployeeId) {
+        return { employeeId: ownEmployeeId };
+      }
+      return { managerId: ownEmployeeId };
     }
-    return { employeeId: explicitEmployeeId ?? Number(user?.employeeId) };
+    return { employeeId: explicitEmployeeId ?? ownEmployeeId };
   }
 
   private async run<T>(action: string, fn: () => Promise<T>): Promise<T> {
@@ -74,6 +78,44 @@ export class ReportsService {
     });
   }
 
+  private async attendanceReport(payload: { query: any; user: any }) {
+    return this.run('attendance', async () => {
+      const range = this.reportQuery.resolveAttendanceDateRange(payload.query ?? {});
+      const format = String(payload.query?.format ?? 'json').toLowerCase();
+      const query = { ...(payload.query ?? {}), ...range };
+      const scope = this.roleScope(payload.user, query);
+      const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
+      const title = 'ATTENDANCE REPORT';
+      if (format === 'pdf' || format === 'html') {
+        const html = this.reportQuery.buildReportHtml(title, result.data, {
+          from_date: range.from_date,
+          to_date: range.to_date,
+          total: result.total,
+        });
+        if (format === 'pdf') {
+          const pdfBuffer = await this.reportPdf.htmlToPdfBuffer(html);
+          return {
+            success: true,
+            format: 'pdf',
+            title,
+            pdfBase64: pdfBuffer.toString('base64'),
+            total: result.total,
+            hasNext: result.hasNext,
+          };
+        }
+        return {
+          success: true,
+          format,
+          title,
+          html,
+          total: result.total,
+          hasNext: result.hasNext,
+        };
+      }
+      return { success: true, period: 'attendance', ...range, ...result };
+    });
+  }
+
   daily(payload: { query: any; user: any }) {
     return this.periodReport('daily', payload);
   }
@@ -87,6 +129,6 @@ export class ReportsService {
   }
 
   attendance(payload: { query: any; user: any }) {
-    return this.daily(payload);
+    return this.attendanceReport(payload);
   }
 }
