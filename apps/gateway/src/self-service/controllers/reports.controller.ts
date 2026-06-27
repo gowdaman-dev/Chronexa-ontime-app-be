@@ -14,7 +14,7 @@ export class ReportsController {
 
   @Get('report/attendance')
   @ApiSelfServiceOperation(
-    'Daily attendance report from sp_employee_daily_report',
+    'Attendance report from sp_employee_daily_report. Date filters are independent; omit dates for all matching rows.',
     ApiReportFilters(),
   )
   getAttendanceReport(
