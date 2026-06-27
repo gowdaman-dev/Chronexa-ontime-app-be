@@ -14,11 +14,15 @@ export class AttendanceService {
   private roleScope(user: any, query: Record<string, any> = {}) {
     const role = String(user?.role ?? '').toLowerCase();
     const explicitEmployeeId = this.common.resolveEmployeeId(query);
+    const ownEmployeeId = Number(user?.employeeId);
     if (role.includes('admin')) return {};
     if (this.common.isManagerRole(user)) {
-      return { managerId: Number(user?.employeeId) };
+      if (explicitEmployeeId && explicitEmployeeId === ownEmployeeId) {
+        return { employeeId: ownEmployeeId };
+      }
+      return { managerId: ownEmployeeId };
     }
-    return { employeeId: explicitEmployeeId ?? Number(user?.employeeId) };
+    return { employeeId: explicitEmployeeId ?? ownEmployeeId };
   }
 
   private async run<T>(action: string, fn: () => Promise<T>): Promise<T> {

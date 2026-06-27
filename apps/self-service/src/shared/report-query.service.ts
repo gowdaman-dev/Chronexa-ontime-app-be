@@ -85,12 +85,14 @@ export class ReportQueryService {
     scope?: ReportRoleScope,
   ) {
     const whereClause = this.buildSpWhere(query, scope);
-    const { skip, take } = this.common.parsePagination(query);
+    const pagination = this.common.parseReportPagination(query);
+    const pagingSql = pagination.unlimited
+      ? ''
+      : ` OFFSET ${pagination.skip} ROWS FETCH NEXT ${pagination.take} ROWS ONLY`;
     const dataQuery = `
       SELECT * FROM [dbo].[sp_employee_daily_report]
       ${whereClause}
-      ORDER BY WorkDate DESC, EmployeeID
-      OFFSET ${skip} ROWS FETCH NEXT ${take} ROWS ONLY
+      ORDER BY WorkDate DESC, EmployeeID${pagingSql}
     `;
     const countQuery = `
       SELECT COUNT(*) as cnt FROM [dbo].[sp_employee_daily_report]
@@ -103,7 +105,10 @@ export class ReportQueryService {
     const total = countResult?.[0]
       ? Number(countResult[0].cnt ?? countResult[0].COUNT ?? 0)
       : 0;
-    return { data, total, hasNext: skip + data.length < total };
+    const hasNext = pagination.unlimited
+      ? false
+      : pagination.skip + data.length < total;
+    return { data, total, hasNext };
   }
 
   resolveDateRange(
@@ -133,10 +138,23 @@ export class ReportQueryService {
     };
   }
 
+  /** Attendance report: honor from_date + to_date from query (old /report/attendance behaviour). */
+  resolveAttendanceDateRange(query: Record<string, any> = {}) {
+    if (query.date) {
+      const day = String(query.date).slice(0, 10);
+      return { from_date: day, to_date: day };
+    }
+    const from = query.from_date ? String(query.from_date).slice(0, 10) : undefined;
+    const to = query.to_date ? String(query.to_date).slice(0, 10) : undefined;
+    if (from && to) return { from_date: from, to_date: to };
+    if (from) return { from_date: from, to_date: from };
+    if (to) return { from_date: to, to_date: to };
+    const today = new Date().toISOString().slice(0, 10);
+    return { from_date: today, to_date: today };
+  }
+
   buildReportHtml(title: string, rows: any[], meta?: { from_date?: string; to_date?: string; total?: number }) {
-    const maxRows = 1000;
-    const displayRows = rows.slice(0, maxRows);
-    const truncated = rows.length > maxRows;
+    const displayRows = rows;
     const headers =
       displayRows.length > 0
         ? Object.keys(displayRows[0]).slice(0, 16)
@@ -159,17 +177,13 @@ export class ReportQueryService {
         : '';
     const totalLine =
       meta?.total !== undefined
-        ? `<p><strong>Total records:</strong> ${meta.total}${truncated ? ` (showing first ${maxRows})` : ''}</p>`
+        ? `<p><strong>Total records:</strong> ${meta.total}</p>`
         : '';
-    const note = truncated
-      ? `<p class="note">PDF shows the first ${maxRows.toLocaleString()} rows. Narrow filters or use JSON export for full data.</p>`
-      : '';
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(title)}</title>
       <style>
         body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111}
         h1{font-size:20px;margin:0 0 8px}
         p{margin:4px 0 12px;font-size:12px}
-        .note{color:#b45309;font-size:11px}
         table{border-collapse:collapse;width:100%;font-size:10px}
         th,td{border:1px solid #d1d5db;padding:4px 6px;text-align:left;vertical-align:top}
         th{background:#f3f4f6;font-weight:600}
@@ -180,7 +194,6 @@ export class ReportQueryService {
         <p>Generated ${escape(new Date().toISOString())}</p>
         ${range}
         ${totalLine}
-        ${note}
         <table><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="' + headers.length + '">No data</td></tr>'}</tbody></table>
       </body></html>`;
   }
