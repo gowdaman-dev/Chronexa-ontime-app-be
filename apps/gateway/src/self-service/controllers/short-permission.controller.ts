@@ -18,8 +18,8 @@ import {
   ApiAddShortPermissionBody,
 } from '@app/dto/self-service.doc';
 import {
-  ApiPaginationFilters,
   ApiShortPermissionListFilters,
+  ApiShortPermissionSearchFilters,
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { toUserPayload } from '../self-service.helpers';
@@ -45,7 +45,7 @@ export class ShortPermissionController {
   }
 
   @Get('employeeShortPermission/pending')
-  @ApiSelfServiceOperation('Get pending short permissions', ApiPaginationFilters())
+  @ApiSelfServiceOperation('Get pending short permissions', ApiShortPermissionListFilters())
   getPendingShortPermissions(@Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.pending', { query });
   }
@@ -106,7 +106,7 @@ export class ShortPermissionController {
   }
 
   @Get('employeeShortPermission/search')
-  @ApiSelfServiceOperation('Search short permission requests', ApiShortPermissionListFilters())
+  @ApiSelfServiceOperation('Search short permission requests', ApiShortPermissionSearchFilters())
   searchShortPermissions(@Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.search', { query });
   }
