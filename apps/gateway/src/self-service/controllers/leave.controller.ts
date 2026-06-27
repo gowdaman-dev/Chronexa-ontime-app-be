@@ -23,6 +23,7 @@ import {
 import {
   ApiPaginationFilters,
   ApiLeaveListFilters,
+  ApiLeaveEmployeeGetFilters,
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { serializeUploadFile, toUserPayload } from '../self-service.helpers';
@@ -54,15 +55,19 @@ export class LeaveController {
   }
 
   @Get('employeeLeave/pending')
-  @ApiSelfServiceOperation('Get pending leave requests', ApiPaginationFilters())
+  @ApiSelfServiceOperation('Get pending leave requests', ApiLeaveListFilters())
   getPendingEmployeeLeaves(@Query() query: any) {
     return this.selfService.workflow('self_service.leaves.pending', { query });
   }
 
   @Get('employeeLeave/get/:id')
-  @ApiSelfServiceOperation('Get leave request by ID', ApiSelfServiceIdParam())
-  getEmployeeLeave(@Param('id') id: string) {
-    return this.selfService.workflow('self_service.leaves.get', { id: +id });
+  @ApiSelfServiceOperation(
+    'Get leave requests for employee ID (legacy path; :id is employee_id, not leave PK)',
+    ApiSelfServiceIdParam('id', 'Employee ID'),
+    ApiLeaveEmployeeGetFilters(),
+  )
+  getEmployeeLeave(@Param('id') id: string, @Query() query: any) {
+    return this.selfService.workflow('self_service.leaves.get', { id: +id, query });
   }
 
   @Get('employeeLeave/byEmployee/:id')

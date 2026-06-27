@@ -52,7 +52,12 @@ export function ApiIsAdUserProperty(options?: ApiPropertyOptions) {
 
 export function ApiAppTypeProperty(options?: ApiPropertyOptions) {
   return applyDecorators(
-    ApiProperty({ example: 'web', description: 'Application type', ...options }),
+    ApiProperty({
+      example: 'ontime',
+      description: 'Mobile app product: ontime | fieldtrack. Enforced on mobile login and API calls.',
+      enum: ['ontime', 'fieldtrack'],
+      ...options,
+    }),
   );
 }
 
