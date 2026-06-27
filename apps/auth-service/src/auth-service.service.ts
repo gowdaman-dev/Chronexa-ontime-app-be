@@ -5,8 +5,10 @@ import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '@app/redis';
 import { AppLoggerService } from '@app/common';
+import { isMobileClient, isPostmanClient } from '@app/auth';
 import axios from 'axios';
 import * as crypto from 'crypto';
+import { AppValidatorService } from './app-validator.service';
 
 @Injectable()
 export class AuthServiceService {
@@ -18,6 +20,7 @@ export class AuthServiceService {
     private readonly config: ConfigService,
     private readonly cache: CacheService,
     private readonly logger: AppLoggerService,
+    private readonly appValidator: AppValidatorService,
   ) {
     this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
@@ -86,11 +89,11 @@ export class AuthServiceService {
   }
 
   async login(login: string, password: string, userAgent?: string) {
-    const ua = (userAgent ?? '').toLowerCase();
-    const isMobileClient = ua.includes('dart/');
+    const mobileClient = isMobileClient(userAgent);
+    const postmanClient = isPostmanClient(userAgent);
     this.logger.info('Login attempt received', {
       login,
-      isMobileClient,
+      isMobileClient: mobileClient,
       userAgent,
     });
 
@@ -102,31 +105,42 @@ export class AuthServiceService {
     if (!user || !user.password) {
       this.logger.warn('Login rejected: invalid credentials', {
         login,
-        isMobileClient,
+        isMobileClient: mobileClient,
       });
       throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
 
-    if (isMobileClient && !user.access_mobile_app) {
-      this.logger.warn('Login rejected: mobile access disabled', {
-        login,
-        employeeId: user.employee_id,
-      });
-      throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
-    }
-    if (!isMobileClient && !user.access_control_panel) {
-      this.logger.warn('Login rejected: control panel access disabled', {
-        login,
-        employeeId: user.employee_id,
-      });
-      throw new RpcException({ statusCode: 403, message: 'Access to control panel is disabled. Please contact IT support.' });
+    if (!postmanClient) {
+      if (mobileClient && !user.access_mobile_app) {
+        this.logger.warn('Login rejected: mobile access disabled', {
+          login,
+          employeeId: user.employee_id,
+        });
+        throw new RpcException({
+          statusCode: 403,
+          message: 'Access to mobile app is disabled. Please contact IT support.',
+        });
+      }
+      if (mobileClient) {
+        await this.appValidator.validateAppAccess(user.user_id!, userAgent);
+      }
+      if (!mobileClient && !user.access_control_panel) {
+        this.logger.warn('Login rejected: control panel access disabled', {
+          login,
+          employeeId: user.employee_id,
+        });
+        throw new RpcException({
+          statusCode: 403,
+          message: 'Access to control panel is disabled. Please contact IT support.',
+        });
+      }
     }
 
     if (!this.verifyPassword(password, user.password)) {
       this.logger.warn('Login rejected: invalid credentials', {
         login,
         employeeId: user.employee_id,
-        isMobileClient,
+        isMobileClient: mobileClient,
       });
       throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
     }
@@ -174,7 +188,7 @@ export class AuthServiceService {
       data: { last_login: new Date() },
     });
 
-    if (isMobileClient) {
+    if (mobileClient) {
       await this.saveMobileAccessToken(emp.employee_id, accessToken);
     }
 
@@ -183,7 +197,7 @@ export class AuthServiceService {
       login: user.login,
       employeeId: emp.employee_id,
       userId: user.user_id,
-      isMobileClient,
+      isMobileClient: mobileClient,
     });
 
     return {
@@ -225,8 +239,8 @@ export class AuthServiceService {
       throw new RpcException({ statusCode: 401, message: 'Invalid AD token' });
     }
 
-    const ua = (userAgent ?? '').toLowerCase();
-    const isMobileClient = ua.includes('dart/') || ua.includes('flutter') || ua.includes('okhttp');
+    const mobileClient = isMobileClient(userAgent);
+    const postmanClient = isPostmanClient(userAgent);
 
     const empRecord: any = await this.prisma.employee_master.findFirst({
       where: { emp_no: empNo },
@@ -246,11 +260,19 @@ export class AuthServiceService {
       throw new RpcException({ statusCode: 401, message: 'No user account linked to this employee' });
     }
 
-    if (isMobileClient && !secUser.access_mobile_app) {
-      this.logger.warn('AD login rejected: mobile access disabled', {
-        employeeId: empRecord.employee_id,
-      });
-      throw new RpcException({ statusCode: 403, message: 'Access to mobile app is disabled. Please contact IT support.' });
+    if (!postmanClient) {
+      if (mobileClient && !secUser.access_mobile_app) {
+        this.logger.warn('AD login rejected: mobile access disabled', {
+          employeeId: empRecord.employee_id,
+        });
+        throw new RpcException({
+          statusCode: 403,
+          message: 'Access to mobile app is disabled. Please contact IT support.',
+        });
+      }
+      if (mobileClient) {
+        await this.appValidator.validateAppAccess(secUser.user_id!, userAgent);
+      }
     }
 
     const role = this.getRole(empRecord.manager_flag);
@@ -277,7 +299,7 @@ export class AuthServiceService {
       },
     });
 
-    if (isMobileClient) {
+    if (mobileClient) {
       await this.saveMobileAccessToken(empRecord.employee_id, accessToken);
     }
 
@@ -285,7 +307,7 @@ export class AuthServiceService {
     this.logger.info('AD login succeeded', {
       login: secUser.login,
       employeeId: empRecord.employee_id,
-      isMobileClient,
+      isMobileClient: mobileClient,
     });
 
     const [orgDetails, lastTxn] = await Promise.all([
@@ -333,7 +355,7 @@ export class AuthServiceService {
     return { success: true, message: 'Logged out successfully' };
   }
 
-  async validateToken(token: string) {
+  async validateToken(token: string, userAgent?: string) {
     try {
       const payload: any = this.jwtService.decode(token);
       if (payload?.jti) {
@@ -342,15 +364,41 @@ export class AuthServiceService {
       }
 
       const cached = await this.cache.get(CACHE_KEYS.AUTH_SESSION(token));
-      if (cached) return cached;
+      if (cached) {
+        await this.enforceMobileAccess(cached, token, userAgent);
+        return cached;
+      }
 
       const verified = this.jwtService.verify(token);
       if (verified) {
+        await this.enforceMobileAccess(verified, token, userAgent);
         await this.cache.set(CACHE_KEYS.AUTH_SESSION(token), verified, CACHE_TTL.AUTH_SESSION);
       }
       return verified;
-    } catch {
+    } catch (err) {
+      if (err instanceof RpcException) throw err;
       return null;
+    }
+  }
+
+  private async enforceMobileAccess(
+    payload: Record<string, any>,
+    token: string,
+    userAgent?: string,
+  ) {
+    if (isPostmanClient(userAgent) || !isMobileClient(userAgent)) return;
+    const userId = Number(payload.userId);
+    const employeeId = Number(payload.employeeId ?? payload.sub);
+    if (!userId) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid token payload',
+        code: 'INVALID_TOKEN',
+      });
+    }
+    await this.appValidator.validateAppAccess(userId, userAgent);
+    if (employeeId) {
+      await this.appValidator.validateMobileToken(employeeId, token);
     }
   }
 

@@ -26,6 +26,8 @@ describe('ShortPermissionsService', () => {
       ),
       parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
+      dateFilter: jest.fn(() => undefined),
+      applyEmployeeOrgScope: jest.fn((where: any) => where),
       compact: jest.fn((value: any) =>
         Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
       ),

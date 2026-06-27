@@ -42,16 +42,17 @@ export class ReportsService {
     payload: { query: any; user: any },
   ) {
     return this.run(period, async () => {
-      const range = this.reportQuery.resolveDateRange(period, payload.query ?? {});
-      const format = String(payload.query?.format ?? 'json').toLowerCase();
-      const query = { ...(payload.query ?? {}), ...range };
+      const baseQuery = payload.query ?? {};
+      const range = this.reportQuery.resolveDateRange(period, baseQuery);
+      const format = String(baseQuery.format ?? 'json').toLowerCase();
+      const query = { ...baseQuery, ...range };
+      const dateMeta = this.reportQuery.reportDateMeta(baseQuery, range);
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
       const title = `${period.toUpperCase()} ATTENDANCE REPORT`;
       if (format === 'pdf' || format === 'html') {
         const html = this.reportQuery.buildReportHtml(title, result.data, {
-          from_date: range.from_date,
-          to_date: range.to_date,
+          ...dateMeta,
           total: result.total,
         });
         if (format === 'pdf') {
@@ -74,22 +75,21 @@ export class ReportsService {
           hasNext: result.hasNext,
         };
       }
-      return { success: true, period, ...range, ...result };
+      return { success: true, period, ...dateMeta, ...result };
     });
   }
 
   private async attendanceReport(payload: { query: any; user: any }) {
     return this.run('attendance', async () => {
-      const range = this.reportQuery.resolveAttendanceDateRange(payload.query ?? {});
-      const format = String(payload.query?.format ?? 'json').toLowerCase();
-      const query = { ...(payload.query ?? {}), ...range };
+      const query = payload.query ?? {};
+      const format = String(query.format ?? 'json').toLowerCase();
+      const dateMeta = this.reportQuery.reportDateMeta(query);
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
       const title = 'ATTENDANCE REPORT';
       if (format === 'pdf' || format === 'html') {
         const html = this.reportQuery.buildReportHtml(title, result.data, {
-          from_date: range.from_date,
-          to_date: range.to_date,
+          ...dateMeta,
           total: result.total,
         });
         if (format === 'pdf') {
@@ -112,7 +112,7 @@ export class ReportsService {
           hasNext: result.hasNext,
         };
       }
-      return { success: true, period: 'attendance', ...range, ...result };
+      return { success: true, period: 'attendance', ...dateMeta, ...result };
     });
   }
 

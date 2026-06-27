@@ -79,6 +79,98 @@ export class WorkflowCommonService {
     return undefined;
   }
 
+  isAdminRole(user: any) {
+    return String(user?.role ?? '').toLowerCase().includes('admin');
+  }
+
+  /** Pass-through — org RBAC is handled outside self-service filters. */
+  applyEmployeeOrgScope(
+    where: Record<string, any>,
+    _relationKey?: string,
+    _user?: { role?: string },
+    _allowedOrgIds?: number[],
+  ) {
+    return where;
+  }
+
+  mergeWhere(
+    base: Record<string, any> = {},
+    extra: Record<string, any> = {},
+  ) {
+    if (!Object.keys(extra).length) return base;
+    if (!Object.keys(base).length) return extra;
+    return { AND: [base, extra] };
+  }
+
+  /** Old GET /employeeLeave/all leave-period overlap filter. */
+  buildLeaveAllDateFilter(fromDate?: string, toDate?: string) {
+    const { startDate: parsedFrom, endDate: parsedTo } = this.parseDateRange(
+      fromDate,
+      toDate,
+    );
+    if (parsedFrom && parsedTo) {
+      return {
+        AND: [
+          {
+            OR: [
+              { from_date: { gte: parsedFrom } },
+              { to_date: { gte: parsedFrom } },
+            ],
+          },
+          {
+            OR: [
+              { from_date: { lte: parsedTo } },
+              { to_date: { lte: parsedTo } },
+            ],
+          },
+        ],
+      };
+    }
+    if (parsedFrom) {
+      return {
+        OR: [
+          { from_date: { gte: parsedFrom } },
+          { to_date: { gte: parsedFrom } },
+        ],
+      };
+    }
+    if (parsedTo) {
+      return {
+        OR: [
+          { from_date: { lte: parsedTo } },
+          { to_date: { lte: parsedTo } },
+        ],
+      };
+    }
+    return {};
+  }
+
+  /** Old GET /employeeLeave/team/all overlap filter. */
+  buildLeaveTeamDateFilter(fromDate?: string, toDate?: string) {
+    const filter: Record<string, any> = {};
+    if (fromDate) filter.to_date = { gte: new Date(String(fromDate)) };
+    if (toDate) filter.from_date = { lte: new Date(String(toDate)) };
+    return filter;
+  }
+
+  /** Old GET /employeeLeave/get/:id (employee list) date containment filter. */
+  buildLeaveEmployeeGetDateFilter(fromDate?: string, toDate?: string) {
+    const { startDate: parsedFrom, endDate: parsedTo } = this.parseDateRange(
+      fromDate,
+      toDate,
+    );
+    const filter: Record<string, any> = {};
+    if (parsedFrom && parsedTo) {
+      filter.from_date = { gte: parsedFrom };
+      filter.to_date = { lte: parsedTo };
+    } else if (parsedFrom) {
+      filter.from_date = { gte: parsedFrom };
+    } else if (parsedTo) {
+      filter.to_date = { lte: parsedTo };
+    }
+    return filter;
+  }
+
   compact<T extends Record<string, any>>(value: T): T {
     return Object.fromEntries(
       Object.entries(value).filter(([, item]) => item !== undefined),
