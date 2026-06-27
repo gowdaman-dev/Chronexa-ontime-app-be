@@ -33,10 +33,18 @@ export function ApiLeaveListFilters() {
       example: 0,
     }),
     q('approve_reject_flag', 'Alias for leave_status', { type: 'number', example: 0 }),
-    q('from_date', 'Leave period start (YYYY-MM-DD)', { example: '2025-01-01' }),
-    q('to_date', 'Leave period end (YYYY-MM-DD)', { example: '2025-12-31' }),
-    q('transaction_from_date', 'Created date range start', { example: '2025-01-01' }),
-    q('transaction_to_date', 'Created date range end', { example: '2025-12-31' }),
+    q(
+      'from_date',
+      'Leave period filter start (YYYY-MM-DD). On /all and /pending: overlap filter. On /team/all: leave.to_date >= from_date. On /get/:id and /byEmployee/:id: leave.from_date >= from_date.',
+      { example: '2025-01-01' },
+    ),
+    q(
+      'to_date',
+      'Leave period filter end (YYYY-MM-DD). On /all and /pending: overlap filter. On /team/all: leave.from_date <= to_date. On /get/:id and /byEmployee/:id: leave.to_date <= to_date.',
+      { example: '2025-12-31' },
+    ),
+    q('transaction_from_date', 'Created date range start (filters created_date)', { example: '2025-01-01' }),
+    q('transaction_to_date', 'Created date range end (filters created_date)', { example: '2025-12-31' }),
     q('search', 'Search employee name or emp number', { example: 'john' }),
     q('employee_number', 'Filter by employee number', { example: 'E001' }),
     q('employee_name', 'Filter by employee name', { example: 'John' }),
@@ -47,18 +55,56 @@ export function ApiLeaveListFilters() {
   );
 }
 
+export function ApiLeaveEmployeeGetFilters() {
+  return applyDecorators(
+    ApiPaginationFilters(),
+    q(
+      'from_date',
+      'Filter leaves where from_date >= value (YYYY-MM-DD). Used with /employeeLeave/get/:id and /byEmployee/:id.',
+      { example: '2025-01-01' },
+    ),
+    q(
+      'to_date',
+      'Filter leaves where to_date <= value (YYYY-MM-DD). Used with /employeeLeave/get/:id and /byEmployee/:id.',
+      { example: '2025-12-31' },
+    ),
+    q('search', 'Search leave type name (employee get mode only)', { example: 'annual' }),
+  );
+}
+
 export function ApiShortPermissionListFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
     q('employee_id', 'Filter by employee ID', { type: 'number', example: 1001 }),
     q('status', 'Approval status (0=pending, 1=approved, 2=rejected)', { type: 'number', example: 0 }),
     q('approve_reject_flag', 'Alias for status', { type: 'number', example: 0 }),
-    q('from_date', 'Permission overlap range start (YYYY-MM-DD)', { example: '2025-01-01' }),
-    q('to_date', 'Permission overlap range end (YYYY-MM-DD)', { example: '2025-12-31' }),
+    q(
+      'from_date',
+      'Permission overlap range start on from_date/to_date (YYYY-MM-DD). Used on /all, /pending, /team/all.',
+      { example: '2025-01-01' },
+    ),
+    q(
+      'to_date',
+      'Permission overlap range end on from_date/to_date (YYYY-MM-DD). Used on /all, /pending, /team/all.',
+      { example: '2025-12-31' },
+    ),
     q('search', 'Search employee name or emp number', { example: 'john' }),
     q('employee_number', 'Filter by employee number', { example: 'E001' }),
     q('employee_name', 'Filter by employee name', { example: 'John' }),
     q('manager_id', 'Filter by manager employee ID', { type: 'number', example: 900 }),
+  );
+}
+
+/** /employeeShortPermission/search — filters from_date only (not overlap). */
+export function ApiShortPermissionSearchFilters() {
+  return applyDecorators(
+    ApiPaginationFilters(),
+    q('status', 'Approval status (0=pending, 1=approved, 2=rejected)', { type: 'number', example: 0 }),
+    q('approve_reject_flag', 'Alias for status', { type: 'number', example: 0 }),
+    q('from_date', 'Filter permission from_date >= value (YYYY-MM-DD)', { example: '2025-01-01' }),
+    q('to_date', 'Filter permission from_date <= value (YYYY-MM-DD)', { example: '2025-12-31' }),
+    q('employee_number', 'Filter by employee number', { example: 'E001' }),
+    q('employee_name', 'Filter by employee name', { example: 'John' }),
   );
 }
 
@@ -107,7 +153,7 @@ export function ApiTodayStatusFilters() {
   return applyDecorators(
     q('employee_id', 'Employee ID (required)', { type: 'number', example: 1001, required: true }),
     q('employeeId', 'Alias for employee_id', { type: 'number', example: 1001 }),
-    q('date', 'Work date (YYYY-MM-DD, default today)', { example: '2025-06-01' }),
+    q('date', 'Work date (YYYY-MM-DD). Omit for server default work date.', { example: '2025-06-01' }),
   );
 }
 
@@ -135,10 +181,16 @@ export function ApiHolidayFilters() {
     ApiPaginationFilters(),
     q('search', 'Search holiday name', { example: 'national' }),
     q('name', 'Alias for search', { example: 'national' }),
-    q('year', 'Filter by calendar year', { type: 'number', example: 2025 }),
-    q('month', 'Filter by month (1-12)', { type: 'number', example: 1 }),
-    q('from_date', 'Holiday date range start', { example: '2025-01-01' }),
-    q('to_date', 'Holiday date range end', { example: '2025-12-31' }),
+    q(
+      'year',
+      'Filter by calendar year of from_date (applied in-memory after fetch, same as legacy app)',
+      { type: 'number', example: 2025 },
+    ),
+    q(
+      'month',
+      'Filter by month 1-12 of from_date (requires year; applied in-memory, same as legacy app)',
+      { type: 'number', example: 1 },
+    ),
     q('recurring_flag', 'Recurring holidays only', { example: 'false' }),
     q('public_holiday_flag', 'Public holidays only', { example: 'true' }),
   );
@@ -152,13 +204,25 @@ export function ApiReportFilters() {
   return applyDecorators(
     q(
       'limit',
-      'Page size. Omit (or use 0 / all) to return every matching row — recommended for PDF/HTML downloads.',
+      'Page size. Omit to return all matching rows (recommended for PDF/HTML downloads).',
       { type: 'number', example: 100 },
     ),
     q('offset', 'Page number (1-based). Only used when limit is set.', { type: 'number', example: 1 }),
-    q('from_date', 'Report start date (YYYY-MM-DD)', { example: '2025-01-01' }),
-    q('to_date', 'Report end date (YYYY-MM-DD)', { example: '2025-06-30' }),
-    q('date', 'Single work date (YYYY-MM-DD)', { example: '2025-06-01' }),
+    q(
+      'from_date',
+      'WorkDate lower bound (YYYY-MM-DD). Independent filter — omit for no lower bound. No implicit today default.',
+      { example: '2025-01-01' },
+    ),
+    q(
+      'to_date',
+      'WorkDate upper bound (YYYY-MM-DD). Independent filter — omit for no upper bound. No implicit today default.',
+      { example: '2025-06-30' },
+    ),
+    q(
+      'date',
+      'Anchor date (YYYY-MM-DD). Expands to period range for daily/weekly/monthly reports when from_date/to_date are omitted.',
+      { example: '2025-06-01' },
+    ),
     q('employee_id', 'Scope to single employee ID', { type: 'number', example: 1001 }),
     q('employee_ids', 'Comma-separated employee IDs', { example: '1001,1002' }),
     q('employeeIds', 'Alias for employee_ids', { example: '1001,1002' }),

@@ -1,5 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiProperty, ApiPropertyOptions, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptions, ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { LoginDto, LoginResponseDto, RefreshTokenDto, LogoutResponseDto } from './auth.dto';
 
@@ -87,19 +87,44 @@ export function ApiAdTokenProperty() {
   );
 }
 
+export function ApiMobileUserAgentHeader() {
+  return applyDecorators(
+    ApiHeader({
+      name: 'User-Agent',
+      required: false,
+      description:
+        'Mobile clients must send dart/<app_type> where app_type is ontime or fieldtrack. ' +
+        'Must match sec_users.app_type for the user. Web/control-panel clients use a normal browser UA. ' +
+        'Postman User-Agent bypasses app_type checks (legacy behavior).',
+      example: 'dart/ontime',
+    }),
+  );
+}
+
 export function ApiLoginOperation() {
   return applyDecorators(
-    ApiOperation({ summary: 'Authenticate with credentials', description: 'Local login with login/password credentials' }),
+    ApiOperation({
+      summary: 'Authenticate with credentials',
+      description:
+        'Local login with login/password. Mobile login requires access_mobile_app=true and matching app_type ' +
+        '(ontime vs fieldtrack) from User-Agent. Web login requires access_control_panel=true.',
+    }),
+    ApiMobileUserAgentHeader(),
     ApiBody({ type: LoginDto }),
     ApiResponse({ status: 200, description: 'Login successful', type: LoginResponseDto }),
-    ApiResponse({ status: 401, description: 'Invalid login or password' }),
-    ApiResponse({ status: 403, description: 'Access denied' }),
+    ApiResponse({ status: 401, description: 'Invalid credentials or app_type mismatch (APP_TYPE_MISMATCH)' }),
+    ApiResponse({ status: 403, description: 'Mobile or control panel access disabled' }),
   );
 }
 
 export function ApiAdLoginOperation() {
   return applyDecorators(
-    ApiOperation({ summary: 'Azure AD login', description: 'Authenticate using Azure AD token' }),
+    ApiOperation({
+      summary: 'Azure AD login',
+      description:
+        'Authenticate using Azure AD token. Same mobile app_type and access_mobile_app rules as /auth/login.',
+    }),
+    ApiMobileUserAgentHeader(),
     ApiBody({
       schema: {
         type: 'object',
@@ -107,7 +132,8 @@ export function ApiAdLoginOperation() {
       },
     }),
     ApiResponse({ status: 200, description: 'AD login successful', type: LoginResponseDto }),
-    ApiResponse({ status: 401, description: 'Invalid AD token' }),
+    ApiResponse({ status: 401, description: 'Invalid AD token or app_type mismatch' }),
+    ApiResponse({ status: 403, description: 'Mobile access disabled' }),
   );
 }
 
