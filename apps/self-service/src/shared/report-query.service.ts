@@ -111,23 +111,63 @@ export class ReportQueryService {
     return { data, total, hasNext };
   }
 
+  private sliceDate(value: unknown) {
+    return value ? String(value).slice(0, 10) : undefined;
+  }
+
+  /**
+   * Old /report/attendance behaviour: each date filter is optional and independent.
+   * Never inject a default date range when the client omits date filters.
+   */
+  resolveReportDateFilters(query: Record<string, any> = {}) {
+    const range: { from_date?: string; to_date?: string; date?: string } = {};
+    if (query.from_date) range.from_date = this.sliceDate(query.from_date);
+    if (query.to_date) range.to_date = this.sliceDate(query.to_date);
+    if (query.date) range.date = this.sliceDate(query.date);
+    return range;
+  }
+
+  /** Response metadata only — mirrors query dates without inventing defaults. */
+  reportDateMeta(
+    query: Record<string, any> = {},
+    merged: Record<string, any> = {},
+  ) {
+    const from_date =
+      merged.from_date ??
+      this.sliceDate(query.from_date) ??
+      (query.date && !query.from_date ? this.sliceDate(query.date) : undefined);
+    const to_date =
+      merged.to_date ??
+      this.sliceDate(query.to_date) ??
+      (query.date && !query.to_date ? this.sliceDate(query.date) : undefined);
+    return {
+      ...(from_date ? { from_date } : {}),
+      ...(to_date ? { to_date } : {}),
+    };
+  }
+
+  /**
+   * Period reports: expand only when `date` is provided.
+   * If from_date / to_date are sent, keep old independent filter behaviour (no period math).
+   */
   resolveDateRange(
     period: 'daily' | 'weekly' | 'monthly',
     query: Record<string, any> = {},
   ) {
-    const anchor = query.date
-      ? new Date(String(query.date))
-      : query.from_date
-        ? new Date(String(query.from_date))
-        : new Date();
+    if (query.from_date || query.to_date) {
+      return this.resolveReportDateFilters(query);
+    }
+    if (!query.date) {
+      return {};
+    }
+
+    const anchor = new Date(String(query.date));
     const start = new Date(anchor);
     const end = new Date(anchor);
 
-    if (period === 'daily') {
-      // single day
-    } else if (period === 'weekly') {
+    if (period === 'weekly') {
       start.setDate(start.getDate() - 6);
-    } else {
+    } else if (period === 'monthly') {
       start.setDate(1);
       end.setMonth(end.getMonth() + 1, 0);
     }
@@ -136,21 +176,6 @@ export class ReportQueryService {
       from_date: start.toISOString().slice(0, 10),
       to_date: end.toISOString().slice(0, 10),
     };
-  }
-
-  /** Attendance report: honor from_date + to_date from query (old /report/attendance behaviour). */
-  resolveAttendanceDateRange(query: Record<string, any> = {}) {
-    if (query.date) {
-      const day = String(query.date).slice(0, 10);
-      return { from_date: day, to_date: day };
-    }
-    const from = query.from_date ? String(query.from_date).slice(0, 10) : undefined;
-    const to = query.to_date ? String(query.to_date).slice(0, 10) : undefined;
-    if (from && to) return { from_date: from, to_date: to };
-    if (from) return { from_date: from, to_date: from };
-    if (to) return { from_date: to, to_date: to };
-    const today = new Date().toISOString().slice(0, 10);
-    return { from_date: today, to_date: today };
   }
 
   buildReportHtml(title: string, rows: any[], meta?: { from_date?: string; to_date?: string; total?: number }) {
