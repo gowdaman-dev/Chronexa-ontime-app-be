@@ -24,6 +24,13 @@ describe('ShortPermissionsService', () => {
       toNumber: jest.fn((value: any) =>
         value === undefined || value === null || value === '' ? undefined : Number(value),
       ),
+      resolveEmployeeId: jest.fn((query: any) =>
+        query?.employeeId !== undefined
+          ? Number(query.employeeId)
+          : query?.employee_id !== undefined
+            ? Number(query.employee_id)
+            : undefined,
+      ),
       parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       dateFilter: jest.fn(() => undefined),
