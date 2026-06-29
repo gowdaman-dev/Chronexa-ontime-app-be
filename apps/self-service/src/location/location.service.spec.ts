@@ -31,7 +31,7 @@ describe('MobileLocationService', () => {
       getSparkEmployee: jest.fn(),
       isWithinAnyLocation: jest.fn(),
     };
-    service = new MobileLocationService(prisma, common);
+    service = new MobileLocationService(prisma, { get: () => 5000 }, common);
   });
 
   it('verifies coordinates inside any configured work location', async () => {

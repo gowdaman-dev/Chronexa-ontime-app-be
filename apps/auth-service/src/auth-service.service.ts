@@ -25,6 +25,37 @@ export class AuthServiceService {
     this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
 
+  private sessionStorageKey(
+    token: string,
+    payload?: Record<string, any>,
+  ): string {
+    const decoded =
+      payload ?? (this.jwtService.decode(token) as Record<string, any> | null);
+    if (decoded?.jti) return `jti:${decoded.jti}`;
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  private async getSessionCache(token: string) {
+    const compactKey = CACHE_KEYS.AUTH_SESSION(this.sessionStorageKey(token));
+    const legacyKey = CACHE_KEYS.AUTH_SESSION(token);
+    return (await this.cache.get(compactKey)) ?? (await this.cache.get(legacyKey));
+  }
+
+  private async setSessionCache(token: string, verified: Record<string, any>) {
+    const key = CACHE_KEYS.AUTH_SESSION(
+      this.sessionStorageKey(token, verified),
+    );
+    await this.cache.set(key, verified, CACHE_TTL.AUTH_SESSION);
+  }
+
+  private async deleteSessionCache(token: string) {
+    const decoded = this.jwtService.decode(token) as Record<string, any> | null;
+    await this.cache.del(
+      CACHE_KEYS.AUTH_SESSION(this.sessionStorageKey(token, decoded ?? undefined)),
+    );
+    await this.cache.del(CACHE_KEYS.AUTH_SESSION(token));
+  }
+
   hashPassword(password: string): string {
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.pbkdf2Sync(password, salt + this.pepper, 10000, 64, 'sha512').toString('hex');
@@ -192,7 +223,7 @@ export class AuthServiceService {
       await this.saveMobileAccessToken(emp.employee_id, accessToken);
     }
 
-    await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+    await this.setSessionCache(accessToken, payload);
     this.logger.info('Login succeeded', {
       login: user.login,
       employeeId: emp.employee_id,
@@ -303,7 +334,7 @@ export class AuthServiceService {
       await this.saveMobileAccessToken(empRecord.employee_id, accessToken);
     }
 
-    await this.cache.set(CACHE_KEYS.AUTH_SESSION(accessToken), payload, CACHE_TTL.AUTH_SESSION);
+    await this.setSessionCache(accessToken, payload);
     this.logger.info('AD login succeeded', {
       login: secUser.login,
       employeeId: empRecord.employee_id,
@@ -350,7 +381,7 @@ export class AuthServiceService {
       }
     } catch {}
 
-    await this.cache.del(CACHE_KEYS.AUTH_SESSION(refreshToken));
+    await this.deleteSessionCache(refreshToken);
 
     return { success: true, message: 'Logged out successfully' };
   }
@@ -363,7 +394,7 @@ export class AuthServiceService {
         if (blacklisted) return null;
       }
 
-      const cached = await this.cache.get(CACHE_KEYS.AUTH_SESSION(token));
+      const cached = await this.getSessionCache(token);
       if (cached) {
         await this.enforceMobileAccess(cached, token, userAgent);
         return cached;
@@ -372,7 +403,7 @@ export class AuthServiceService {
       const verified = this.jwtService.verify(token);
       if (verified) {
         await this.enforceMobileAccess(verified, token, userAgent);
-        await this.cache.set(CACHE_KEYS.AUTH_SESSION(token), verified, CACHE_TTL.AUTH_SESSION);
+        await this.setSessionCache(token, verified);
       }
       return verified;
     } catch (err) {
@@ -406,7 +437,10 @@ export class AuthServiceService {
     try {
       const { data, status } = await axios.get(
         'https://graph.microsoft.com/v1.0/me?$select=employeeId',
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: this.config.get<number>('graphApiTimeoutMs') ?? 15_000,
+        },
       );
       if (status === 200) {
         this.logger.debug('Graph API user resolved', {

@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { LoggingModule } from '@app/common';
 import { UserServiceService } from './user-service.service';
 import { UserServiceController } from './user-service.controller';
 
 @Module({
   imports: [
+    LoggingModule,
     ClientsModule.registerAsync([
       {
         name: 'USER_SERVICE',

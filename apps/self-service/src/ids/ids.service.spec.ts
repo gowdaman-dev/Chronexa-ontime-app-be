@@ -3,7 +3,7 @@ const { MobileIdsService } = require('./ids.service');
 describe('MobileIdsService', () => {
   const fixedNow = new Date('2026-05-02T10:00:00.000Z');
   let prisma: any;
-  let config: any;
+  let idsHttp: any;
   let common: any;
   let service: any;
 
@@ -16,33 +16,22 @@ describe('MobileIdsService', () => {
         findUnique: jest.fn(),
       },
     };
-    config = {
-      get: jest.fn(),
+    idsHttp = {
+      getBaseUrl: jest.fn().mockReturnValue('https://ids.local/api/v2.0'),
+      login: jest.fn().mockResolvedValue('session-1'),
+      requestJson: jest.fn(),
     };
-    config.get.mockImplementation((key: string, defaultValue?: string) => {
-      const values: Record<string, string> = {
-        idsBaseUrl: 'https://ids.local/api/v2.0',
-        idsUsername: 'ids-user',
-        idsPassword: 'ids-password',
-      };
-      return values[key] ?? defaultValue;
-    });
     common = {
       fail: jest.fn((statusCode: number, message: string, extra?: any) => {
         throw { statusCode, message, ...extra };
       }),
       getServerTime: jest.fn().mockResolvedValue(fixedNow),
     };
-    service = new MobileIdsService(prisma, config, common);
+    service = new MobileIdsService(prisma, idsHttp, common);
   });
 
   it('uses IDS verify-encounter for 1:1 verification', async () => {
-    const requestJson = jest
-      .spyOn(service as any, 'requestJson')
-      .mockResolvedValueOnce({
-        status: 200,
-        headers: { 'set-cookie': ['JSESSIONID=session-1; Path=/'] },
-      })
+    idsHttp.requestJson
       .mockResolvedValueOnce({
         status: 200,
         data: { bestCandidate: { subjectId: 'EMP001' } },
@@ -74,8 +63,8 @@ describe('MobileIdsService', () => {
       },
     });
 
-    expect(requestJson).toHaveBeenNthCalledWith(
-      2,
+    expect(idsHttp.requestJson).toHaveBeenNthCalledWith(
+      1,
       'POST',
       'https://ids.local/api/v2.0/verify-encounter?liveness=true',
       expect.objectContaining({ subjectId: 'EMP001' }),

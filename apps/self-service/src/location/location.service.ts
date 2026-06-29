@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@app/prisma';
 
 const { MobileCommonService } = require('../shared/mobile-common.service');
@@ -7,6 +8,7 @@ const { MobileCommonService } = require('../shared/mobile-common.service');
 export class MobileLocationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
     @Inject(MobileCommonService) private readonly common: any,
   ) {}
 
@@ -59,8 +61,10 @@ export class MobileLocationService {
 
   async verifyLocation(coordinates: number[]) {
     this.common.assertCoordinates(coordinates);
+    const locationMaxRows = this.config.get<number>('locationMaxRows') ?? 5000;
     const locations = await this.prisma.locations.findMany({
       select: { radius: true, geolocation: true },
+      take: locationMaxRows,
     });
     if (!this.common.isWithinAnyLocation(coordinates, locations)) {
       return this.common.fail(

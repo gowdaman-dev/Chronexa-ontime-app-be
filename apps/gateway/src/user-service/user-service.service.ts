@@ -1,21 +1,26 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, catchError, throwError } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
+import { AppLoggerService, sendRpc } from '@app/common';
 
 @Injectable()
 export class UserServiceService {
-  constructor(@Inject('USER_SERVICE') private readonly client: ClientProxy) {}
+  constructor(
+    @Inject('USER_SERVICE') private readonly client: ClientProxy,
+    private readonly config: ConfigService,
+    private readonly logger: AppLoggerService,
+  ) {}
 
-  private async send<T>(pattern: any, data?: any): Promise<T> {
-    return firstValueFrom(
-      this.client.send<T>(pattern, data ?? {}).pipe(
-        catchError((err: any) => {
-          if (err?.statusCode) {
-            return throwError(() => new HttpException(err.message, err.statusCode));
-          }
-          return throwError(() => new HttpException('Service unavailable', HttpStatus.SERVICE_UNAVAILABLE));
-        }),
-      ),
+  private send<T>(pattern: string, data?: any): Promise<T> {
+    return sendRpc<T>(
+      this.client,
+      pattern,
+      data ?? {},
+      this.logger,
+      {
+        rpcTimeoutMs: this.config.get<number>('rpcTimeoutMs'),
+        pattern,
+      },
     );
   }
 

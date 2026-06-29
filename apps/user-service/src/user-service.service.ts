@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { ConfigService } from '@app/config';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '@app/redis';
+import { AppLoggerService, runMicroserviceAction } from '@app/common';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -12,8 +13,15 @@ export class UserServiceService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly cache: CacheService,
+    private readonly logger: AppLoggerService,
   ) {
     this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
+  }
+
+  private run<T>(action: string, fn: () => Promise<T>): Promise<T> {
+    return runMicroserviceAction(this.logger, action, fn, {
+      logContext: 'User service action failed',
+    });
   }
 
   hashPassword(password: string): string {
@@ -62,7 +70,8 @@ export class UserServiceService {
   }
 
   async getUserById(id: number) {
-    const user = await this.prisma.sec_users.findUnique({
+    return this.run('getUserById', async () => {
+      const user = await this.prisma.sec_users.findUnique({
       where: { user_id: id },
       include: {
         employee_master: { select: { firstname_eng: true, lastname_eng: true, email: true } },
@@ -71,10 +80,12 @@ export class UserServiceService {
     });
     if (!user) return null;
     return this.mapUserResponse(user);
+    });
   }
 
   async getUserByLogin(login: string) {
-    const user = await this.prisma.sec_users.findUnique({
+    return this.run('getUserByLogin', async () => {
+      const user = await this.prisma.sec_users.findUnique({
       where: { login },
       include: {
         employee_master: { select: { firstname_eng: true, lastname_eng: true, email: true } },
@@ -83,19 +94,20 @@ export class UserServiceService {
     });
     if (!user) return null;
     return this.mapUserResponse(user);
+    });
   }
 
   async getAllUsers(limit = 20, offset = 0) {
-    const cacheKey = CACHE_KEYS.USERS_LIST;
-    const cached = await this.cache.get<any>(cacheKey);
+    return this.run('getAllUsers', async () => {
+      const cacheKey = CACHE_KEYS.USERS_LIST(limit, offset);
+    const cached = await this.cache.get<{
+      success: boolean;
+      data: any[];
+      total: number;
+      hasNext: boolean;
+    }>(cacheKey);
     if (cached) {
-      const sliced = cached.slice(offset, offset + limit);
-      return {
-        success: true,
-        data: sliced,
-        total: cached.length,
-        hasNext: offset + limit < cached.length,
-      };
+      return cached;
     }
 
     const [users, total] = await Promise.all([
@@ -111,18 +123,21 @@ export class UserServiceService {
     ]);
 
     const data = users.map((u) => this.mapUserResponse(u));
-    await this.cache.set(cacheKey, data, CACHE_TTL.LIST);
-
-    return {
+    const response = {
       success: true,
       data,
       total,
       hasNext: offset + limit < total,
     };
+    await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
+
+    return response;
+    });
   }
 
   async createUser(data: any) {
-    const createData: any = {
+    return this.run('createUser', async () => {
+      const createData: any = {
       login: data.login,
       employee_id: data.employeeId ?? data.employee_id,
       created_id: data.createdId ?? data.created_id,
@@ -142,12 +157,14 @@ export class UserServiceService {
     if (data.activeUser !== undefined) createData.active_user = data.activeUser;
 
     const user = await (this.prisma.sec_users.create as any)({ data: createData });
-    await this.cache.del(CACHE_KEYS.USERS_LIST);
+    await this.cache.delPattern('users:list:*');
     return this.getUserById(user.user_id);
+    });
   }
 
   async updateUser(id: number, data: any) {
-    const updateData: any = {};
+    return this.run('updateUser', async () => {
+      const updateData: any = {};
 
     if (data.login !== undefined) updateData.login = data.login;
     if (data.password !== undefined) updateData.password = this.hashPassword(data.password);
@@ -165,34 +182,39 @@ export class UserServiceService {
       where: { user_id: id },
       data: updateData,
     });
-    await this.cache.del(CACHE_KEYS.USERS_LIST);
+    await this.cache.delPattern('users:list:*');
     return this.getUserById(id);
+    });
   }
 
   async deleteUser(id: number) {
-    await (this.prisma.sec_user_roles.deleteMany as any)({ where: { user_id: id } });
+    return this.run('deleteUser', async () => {
+      await (this.prisma.sec_user_roles.deleteMany as any)({ where: { user_id: id } });
     await (this.prisma.sec_users.delete as any)({ where: { user_id: id } });
-    await this.cache.del(CACHE_KEYS.USERS_LIST);
+    await this.cache.delPattern('users:list:*');
     return { success: true };
+    });
   }
 
   async getEmployeeById(id: number) {
-    const emp = await this.prisma.employee_master.findUnique({ where: { employee_id: id } });
+    return this.run('getEmployeeById', async () => {
+      const emp = await this.prisma.employee_master.findUnique({ where: { employee_id: id } });
     if (!emp) return null;
     return this.mapEmployeeResponse(emp);
+    });
   }
 
   async getAllEmployees(limit = 20, offset = 0) {
-    const cacheKey = CACHE_KEYS.EMPLOYEES_LIST;
-    const cached = await this.cache.get<any>(cacheKey);
+    return this.run('getAllEmployees', async () => {
+      const cacheKey = CACHE_KEYS.EMPLOYEES_LIST(limit, offset);
+    const cached = await this.cache.get<{
+      success: boolean;
+      data: any[];
+      total: number;
+      hasNext: boolean;
+    }>(cacheKey);
     if (cached) {
-      const sliced = cached.slice(offset, offset + limit);
-      return {
-        success: true,
-        data: sliced,
-        total: cached.length,
-        hasNext: offset + limit < cached.length,
-      };
+      return cached;
     }
 
     const [emps, total] = await Promise.all([
@@ -201,18 +223,21 @@ export class UserServiceService {
     ]);
 
     const data = emps.map((e) => this.mapEmployeeResponse(e));
-    await this.cache.set(cacheKey, data, CACHE_TTL.LIST);
-
-    return {
+    const response = {
       success: true,
       data,
       total,
       hasNext: offset + limit < total,
     };
+    await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
+
+    return response;
+    });
   }
 
   async createEmployee(data: any) {
-    const createData: Record<string, any> = {
+    return this.run('createEmployee', async () => {
+      const createData: Record<string, any> = {
       emp_no: data.empNo ?? data.emp_no,
       firstname_eng: data.firstnameEng ?? data.firstname_eng,
       lastname_eng: data.lastnameEng ?? data.lastname_eng,
@@ -280,12 +305,14 @@ export class UserServiceService {
     }
 
     const emp = await (this.prisma.employee_master.create as any)({ data: createData });
-    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
+    await this.cache.delPattern('employees:list:*');
     return this.mapEmployeeResponse(emp);
+    });
   }
 
   async updateEmployee(id: number, data: any) {
-    const updateData: Record<string, any> = {};
+    return this.run('updateEmployee', async () => {
+      const updateData: Record<string, any> = {};
 
     const fieldMap: Record<string, string> = {
       empNo: 'emp_no',
@@ -355,13 +382,16 @@ export class UserServiceService {
       where: { employee_id: id },
       data: updateData,
     });
-    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
+    await this.cache.delPattern('employees:list:*');
     return this.getEmployeeById(id);
+    });
   }
 
   async deleteEmployee(id: number) {
-    await (this.prisma.employee_master.delete as any)({ where: { employee_id: id } });
-    await this.cache.del(CACHE_KEYS.EMPLOYEES_LIST);
-    return { success: true };
+    return this.run('deleteEmployee', async () => {
+      await (this.prisma.employee_master.delete as any)({ where: { employee_id: id } });
+      await this.cache.delPattern('employees:list:*');
+      return { success: true };
+    });
   }
 }

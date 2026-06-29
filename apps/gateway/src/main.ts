@@ -6,7 +6,7 @@ import {
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
-import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import compression from 'compression';
@@ -92,7 +92,7 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
   const appLogger = app.get(AppLoggerService);
-  app.useGlobalFilters(new RpcExceptionFilter(appLogger));
+  app.useGlobalFilters(new AllExceptionsFilter(appLogger));
 
   app.use(
     '/docs',
