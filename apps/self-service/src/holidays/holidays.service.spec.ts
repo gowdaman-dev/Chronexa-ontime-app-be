@@ -26,7 +26,18 @@ describe('HolidaysService', () => {
       ),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
-      dateFilter: jest.fn(() => undefined),
+      parseDateRange: jest.fn((start?: string, end?: string) => ({
+        startDate: start ? new Date(start) : undefined,
+        endDate: end ? new Date(end) : undefined,
+      })),
+      dateFilter: jest.fn((start?: string, end?: string) => {
+        if (!start && !end) return undefined;
+        const filter: any = {};
+        if (start) filter.gte = new Date(start);
+        if (end) filter.lte = new Date(end);
+        return filter;
+      }),
+      mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
       compact: jest.fn((value: any) =>
         Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
       ),
@@ -44,6 +55,33 @@ describe('HolidaysService', () => {
     await expect(service.all({ query: { year: 2025 } })).resolves.toEqual({
       success: true,
       data: [{ holiday_id: 1, from_date: new Date('2025-06-01') }],
+      total: 1,
+      hasNext: false,
+    });
+  });
+
+  it('applies from_date/to_date overlap filter on /all', async () => {
+    prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
+
+    await service.all({ query: { from_date: '2025-06-01', to_date: '2025-06-30' } });
+
+    expect(prisma.holidays.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.any(Array),
+        }),
+      }),
+    );
+  });
+
+  it('filters upcoming holidays by from_date/to_date', async () => {
+    prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 2 }]);
+
+    await expect(
+      service.upcoming({ query: { from_date: '2025-07-01', to_date: '2025-07-31' } }),
+    ).resolves.toEqual({
+      success: true,
+      data: [{ holiday_id: 2 }],
       total: 1,
       hasNext: false,
     });

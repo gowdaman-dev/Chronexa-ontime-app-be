@@ -24,6 +24,18 @@ export class HolidaysService {
     }
   }
 
+  private buildHolidayDateFilter(query: Record<string, any> = {}) {
+    const { startDate: from, endDate: to } = this.common.parseDateRange(
+      query.from_date,
+      query.to_date,
+    );
+    if (!from && !to) return {};
+    const conditions: Record<string, any>[] = [];
+    if (from) conditions.push({ to_date: { gte: from } });
+    if (to) conditions.push({ from_date: { lte: to } });
+    return conditions.length === 1 ? conditions[0] : { AND: conditions };
+  }
+
   private whereFromQuery(query: Record<string, any> = {}) {
     const where: any = {};
     if (query.search || query.name) {
@@ -38,6 +50,10 @@ export class HolidaysService {
     }
     if (this.common.toBoolean(query.public_holiday_flag) !== undefined) {
       where.public_holiday_flag = this.common.toBoolean(query.public_holiday_flag);
+    }
+    const dateFilter = this.buildHolidayDateFilter(query);
+    if (Object.keys(dateFilter).length) {
+      return this.common.mergeWhere(where, dateFilter);
     }
     return where;
   }
@@ -96,15 +112,48 @@ export class HolidaysService {
 
   async upcoming(payload: { query?: any }) {
     return this.run('upcoming', async () => {
-      const days = this.common.toNumber(payload.query?.days) ?? 30;
-      const now = new Date();
-      const end = new Date();
+      const query = payload.query ?? {};
+      const { skip, take } = this.common.parsePagination(query);
+
+      if (query.from_date || query.to_date) {
+        const where: any = {};
+        const range = this.common.dateFilter(query.from_date, query.to_date);
+        if (range) where.from_date = range;
+        const rows = await this.prisma.holidays.findMany({
+          where,
+          orderBy: { from_date: 'asc' },
+        });
+        const data = rows.slice(skip, skip + take);
+        return {
+          success: true,
+          data,
+          total: rows.length,
+          hasNext: skip + data.length < rows.length,
+        };
+      }
+
+      const days = this.common.toNumber(query.days) ?? 30;
+      if (days < 1) this.common.fail(400, 'Invalid days parameter. Must be a positive number.');
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(today);
       end.setDate(end.getDate() + days);
-      const data = await this.prisma.holidays.findMany({
-        where: { from_date: { gte: now, lte: end } },
+      end.setHours(23, 59, 59, 999);
+
+      const rows = await this.prisma.holidays.findMany({
+        where: {
+          from_date: { gte: today, lte: end },
+        },
         orderBy: { from_date: 'asc' },
       });
-      return { success: true, data, total: data.length };
+      const data = rows.slice(skip, skip + take);
+      return {
+        success: true,
+        data,
+        total: rows.length,
+        hasNext: skip + data.length < rows.length,
+      };
     });
   }
 

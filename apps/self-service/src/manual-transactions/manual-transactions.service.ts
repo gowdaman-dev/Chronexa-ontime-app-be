@@ -219,6 +219,56 @@ export class ManualTransactionsService {
     });
   }
 
+  private async whereFromTeamQuery(
+    query: Record<string, any> = {},
+    teamMemberIds: number[],
+  ) {
+    let employeeIds = teamMemberIds;
+    const employeeId = this.common.resolveEmployeeId(query);
+    if (employeeId) {
+      employeeIds = teamMemberIds.includes(employeeId) ? [employeeId] : [];
+    }
+
+    if (!employeeIds.length) {
+      return { employee_id: -1 };
+    }
+
+    const where: any = { employee_id: { in: employeeIds } };
+    const status = query.status ?? query.pending;
+    if (status) where.transaction_status = String(status);
+
+    const dateFilter = this.common.dateFilter(query.from_date, query.to_date);
+    if (dateFilter) where.transaction_time = dateFilter;
+
+    const search = query.search ? String(query.search).trim() : '';
+    if (search) {
+      const matched = await this.prisma.employee_master.findMany({
+        where: {
+          AND: [
+            { employee_id: { in: employeeIds } },
+            {
+              OR: [
+                { firstname_eng: { contains: search } },
+                { lastname_eng: { contains: search } },
+                { firstname_arb: { contains: search } },
+                { lastname_arb: { contains: search } },
+                { emp_no: { contains: search } },
+              ],
+            },
+          ],
+        },
+        select: { employee_id: true },
+      });
+      const matchedIds = matched.map((row) => row.employee_id);
+      if (!matchedIds.length) {
+        return { employee_id: -1 };
+      }
+      where.employee_id = { in: matchedIds };
+    }
+
+    return where;
+  }
+
   async teamAll(payload: { user: any; query: any }) {
     return this.run('teamAll', async () => {
       const managerId = Number(payload.user?.employeeId);
@@ -231,10 +281,7 @@ export class ManualTransactionsService {
         return { success: true, data: [], hasNext: false, total: 0 };
       }
       const { skip, take } = this.common.parsePagination(payload.query);
-      const where = {
-        ...this.whereFromQuery(payload.query),
-        employee_id: { in: ids },
-      };
+      const where = await this.whereFromTeamQuery(payload.query ?? {}, ids);
       const [rows, total] = await Promise.all([
         this.prisma.employee_manual_transactions.findMany({
           where,
