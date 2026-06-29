@@ -37,7 +37,11 @@ describe('HolidaysService', () => {
         if (end) filter.lte = new Date(end);
         return filter;
       }),
-      mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
+      mergeWhere: jest.fn((base: any, extra: any) => {
+        if (!Object.keys(base).length) return extra;
+        if (!Object.keys(extra).length) return base;
+        return { AND: [base, extra] };
+      }),
       compact: jest.fn((value: any) =>
         Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
       ),
@@ -49,8 +53,8 @@ describe('HolidaysService', () => {
   it('returns paginated holidays with year filter', async () => {
     prisma.holidays.findMany.mockResolvedValue([
       { holiday_id: 1, from_date: new Date('2025-06-01') },
-      { holiday_id: 2, from_date: new Date('2024-06-01') },
     ]);
+    prisma.holidays.count.mockResolvedValue(1);
 
     await expect(service.all({ query: { year: 2025 } })).resolves.toEqual({
       success: true,
@@ -58,10 +62,38 @@ describe('HolidaysService', () => {
       total: 1,
       hasNext: false,
     });
+
+    expect(prisma.holidays.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 10,
+        where: expect.objectContaining({
+          from_date: expect.objectContaining({
+            gte: expect.any(Date),
+            lt: expect.any(Date),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('applies month filter with DB pagination', async () => {
+    prisma.holidays.findMany.mockResolvedValue([
+      { holiday_id: 3, from_date: new Date('2025-06-15') },
+    ]);
+    prisma.holidays.count.mockResolvedValue(1);
+
+    await expect(service.all({ query: { year: 2025, month: 6 } })).resolves.toEqual({
+      success: true,
+      data: [{ holiday_id: 3, from_date: new Date('2025-06-15') }],
+      total: 1,
+      hasNext: false,
+    });
   });
 
   it('applies from_date/to_date overlap filter on /all', async () => {
     prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
+    prisma.holidays.count.mockResolvedValue(1);
 
     await service.all({ query: { from_date: '2025-06-01', to_date: '2025-06-30' } });
 
@@ -74,8 +106,9 @@ describe('HolidaysService', () => {
     );
   });
 
-  it('filters upcoming holidays by from_date/to_date', async () => {
+  it('filters upcoming holidays by from_date/to_date with DB pagination', async () => {
     prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 2 }]);
+    prisma.holidays.count.mockResolvedValue(1);
 
     await expect(
       service.upcoming({ query: { from_date: '2025-07-01', to_date: '2025-07-31' } }),
@@ -85,6 +118,13 @@ describe('HolidaysService', () => {
       total: 1,
       hasNext: false,
     });
+
+    expect(prisma.holidays.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 10,
+      }),
+    );
   });
 
   it('creates a holiday', async () => {

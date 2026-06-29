@@ -27,6 +27,7 @@ import {
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { serializeUploadFile, toUserPayload } from '../self-service.helpers';
+import { getMulterUploadOptions } from '../../uploads/multer.options';
 
 @ApiTags('Employee Leave')
 @Controller({ version: '1' })
@@ -34,7 +35,7 @@ export class LeaveController {
   constructor(private readonly selfService: SelfServiceGatewayService) {}
 
   @Post('employeeLeave/add')
-  @UseInterceptors(FileInterceptor('leave_doc'))
+  @UseInterceptors(FileInterceptor('leave_doc', getMulterUploadOptions()))
   @ApiSelfServiceOperation('Add employee leave request', ApiAddLeaveBody())
   addEmployeeLeave(
     @CurrentUser() user: AuthUser,
@@ -102,7 +103,7 @@ export class LeaveController {
   }
 
   @Put('employeeLeave/edit/:id')
-  @UseInterceptors(FileInterceptor('leave_doc'))
+  @UseInterceptors(FileInterceptor('leave_doc', getMulterUploadOptions()))
   @ApiSelfServiceOperation('Edit leave request', ApiSelfServiceIdParam(), ApiAddLeaveBody())
   editEmployeeLeave(
     @CurrentUser() user: AuthUser,

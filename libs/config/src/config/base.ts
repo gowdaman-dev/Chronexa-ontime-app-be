@@ -13,4 +13,11 @@ export default () => ({
   idsBaseUrl: process.env.IDS_BASE_URL,
   idsUsername: process.env.IDS_USERNAME,
   idsPassword: process.env.IDS_PASSWORD,
+  rpcTimeoutMs: parseInt(process.env.RPC_TIMEOUT_MS ?? '', 10) || 30_000,
+  idsTimeoutMs: parseInt(process.env.IDS_TIMEOUT_MS ?? '', 10) || 20_000,
+  dbQueryTimeoutMs: parseInt(process.env.DB_QUERY_TIMEOUT_MS ?? '', 10) || 30_000,
+  graphApiTimeoutMs: parseInt(process.env.GRAPH_API_TIMEOUT_MS ?? '', 10) || 15_000,
+  puppeteerTimeoutMs: parseInt(process.env.PUPPETEER_TIMEOUT_MS ?? '', 10) || 60_000,
+  maxUploadBytes: parseInt(process.env.MAX_UPLOAD_BYTES ?? '', 10) || 10 * 1024 * 1024,
+  locationMaxRows: parseInt(process.env.LOCATION_MAX_ROWS ?? '', 10) || 5000,
 });

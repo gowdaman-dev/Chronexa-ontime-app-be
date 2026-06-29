@@ -24,7 +24,9 @@ describe('ManualTransactionsService', () => {
       employee_master: {
         findMany: jest.fn(),
       },
+      $transaction: jest.fn(async (fn: any) => fn(prisma)),
     };
+    prisma.employee_event_transactions.createMany = jest.fn();
     const common = {
       fail: jest.fn((statusCode: number, message: string) => {
         const error: any = new Error(message);
@@ -119,9 +121,37 @@ describe('ManualTransactionsService', () => {
     });
 
     expect(prisma.employee_event_transactions.create).toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.emp_missing_movements.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ Status_IN: 'Approved' }),
+      }),
+    );
+  });
+
+  it('group approves transactions with createMany', async () => {
+    prisma.employee_event_transactions.createMany.mockResolvedValue({ count: 2 });
+
+    await expect(
+      service.groupApproveTransactions({
+        user: { employeeId: 123 },
+        body: {
+          employeeIds: [1, 2],
+          transaction_time: '2026-06-01T08:00:00.000Z',
+          reason: 'IN',
+        },
+      }),
+    ).resolves.toEqual({
+      message: 'Group transaction approved successfully for 2 employees.',
+      numberOfEmployees: 2,
+    });
+
+    expect(prisma.employee_event_transactions.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ employee_id: 1, reason: 'IN' }),
+          expect.objectContaining({ employee_id: 2, reason: 'IN' }),
+        ]),
       }),
     );
   });

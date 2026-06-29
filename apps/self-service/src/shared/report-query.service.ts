@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@app/prisma';
 import { WorkflowCommonService } from './workflow-common.service';
 
@@ -80,27 +81,116 @@ export class ReportQueryService {
     return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   }
 
+  private buildSpWhereSql(
+    query: Record<string, any> = {},
+    scope?: ReportRoleScope,
+  ): Prisma.Sql {
+    const conditions: Prisma.Sql[] = [Prisma.sql`EmployeeStatus='Active'`];
+
+    if (query.from_date) {
+      conditions.push(
+        Prisma.sql`WorkDate >= ${String(query.from_date).slice(0, 10)}`,
+      );
+    }
+    if (query.to_date) {
+      conditions.push(
+        Prisma.sql`WorkDate <= ${String(query.to_date).slice(0, 10)}`,
+      );
+    }
+    if (query.date) {
+      conditions.push(Prisma.sql`WorkDate = ${String(query.date).slice(0, 10)}`);
+    }
+
+    const employeeIds = this.common.parseNumberArray(
+      query.employee_ids ?? query.employeeIds,
+    );
+    const scopedEmployeeId =
+      scope?.employeeId ?? this.common.resolveEmployeeId(query);
+    if (scopedEmployeeId) {
+      conditions.push(Prisma.sql`EmployeeID = ${scopedEmployeeId}`);
+    } else if (employeeIds.length) {
+      conditions.push(
+        Prisma.sql`EmployeeID IN (${Prisma.join(employeeIds)})`,
+      );
+    }
+
+    const organizationId = this.common.toNumber(
+      query.organization_id ?? query.organizationId,
+    );
+    if (organizationId) {
+      conditions.push(Prisma.sql`OrganizationID = ${organizationId}`);
+    }
+
+    const departmentId = this.common.toNumber(
+      query.department_id ?? query.departmentId,
+    );
+    if (departmentId) {
+      conditions.push(Prisma.sql`DepartmentID = ${departmentId}`);
+    }
+
+    const parentOrgId = this.common.toNumber(
+      query.parent_orgid ?? query.parentOrgId,
+    );
+    if (parentOrgId) {
+      conditions.push(Prisma.sql`ParentOrgID = ${parentOrgId}`);
+    }
+
+    const managerId =
+      scope?.managerId ?? this.common.toNumber(query.manager_id ?? query.managerId);
+    if (managerId) {
+      conditions.push(Prisma.sql`ManagerID = ${managerId}`);
+    }
+
+    const employeeTypeIds = this.common.parseNumberArray(
+      query.employee_type_ids ?? query.employeeTypeIds,
+    );
+    if (employeeTypeIds.length) {
+      conditions.push(
+        Prisma.sql`EmployeeTypeID IN (${Prisma.join(employeeTypeIds)})`,
+      );
+    }
+
+    if (query.isabsent !== undefined) {
+      const val =
+        query.isabsent === true ||
+        query.isabsent === 'true' ||
+        query.isabsent === '1'
+          ? '1'
+          : '0';
+      conditions.push(Prisma.sql`IsAbsent = ${val}`);
+    }
+
+    if (query.costcode) {
+      conditions.push(Prisma.sql`CostCode = ${String(query.costcode)}`);
+    }
+    if (query.costcenter) {
+      conditions.push(Prisma.sql`CostCenter = ${String(query.costcenter)}`);
+    }
+
+    return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
+  }
+
   async querySpEmployeeDailyReport(
     query: Record<string, any> = {},
     scope?: ReportRoleScope,
   ) {
-    const whereClause = this.buildSpWhere(query, scope);
+    const whereClause = this.buildSpWhereSql(query, scope);
     const pagination = this.common.parseReportPagination(query);
     const pagingSql = pagination.unlimited
-      ? ''
-      : ` OFFSET ${pagination.skip} ROWS FETCH NEXT ${pagination.take} ROWS ONLY`;
-    const dataQuery = `
+      ? Prisma.empty
+      : Prisma.sql` OFFSET ${pagination.skip} ROWS FETCH NEXT ${pagination.take} ROWS ONLY`;
+    const dataQuery = Prisma.sql`
       SELECT * FROM [dbo].[sp_employee_daily_report]
       ${whereClause}
       ORDER BY WorkDate DESC, EmployeeID${pagingSql}
     `;
-    const countQuery = `
+    const countQuery = Prisma.sql`
       SELECT COUNT(*) as cnt FROM [dbo].[sp_employee_daily_report]
       ${whereClause}
     `;
     const [data, countResult] = await Promise.all([
-      this.prisma.$queryRawUnsafe<any[]>(dataQuery),
-      this.prisma.$queryRawUnsafe<any[]>(countQuery),
+      this.prisma.$queryRaw<any[]>(dataQuery),
+      this.prisma.$queryRaw<any[]>(countQuery),
     ]);
     const total = countResult?.[0]
       ? Number(countResult[0].cnt ?? countResult[0].COUNT ?? 0)

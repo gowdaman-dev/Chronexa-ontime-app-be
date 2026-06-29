@@ -3,7 +3,7 @@ import { SelfServiceService } from './self-service.service';
 describe('SelfServiceService IDS punch', () => {
   const fixedNow = new Date('2026-05-02T10:00:00.000Z');
   let prisma: any;
-  let config: any;
+  let idsHttp: any;
   let logger: any;
   let service: SelfServiceService;
 
@@ -17,34 +17,22 @@ describe('SelfServiceService IDS punch', () => {
         findUnique: jest.fn(),
       },
     };
-    config = {
-      get: jest.fn(),
-      getOrThrow: jest.fn(),
+    idsHttp = {
+      getBaseUrl: jest.fn().mockReturnValue('https://ids.local/api/v2.0'),
+      login: jest.fn().mockResolvedValue('session-1'),
+      requestJson: jest.fn(),
     };
-    config.get.mockImplementation((key: string, defaultValue?: string) => {
-      const values: Record<string, string> = {
-        idsBaseUrl: 'https://ids.local/api/v2.0',
-        idsUsername: 'ids-user',
-        idsPassword: 'ids-password',
-      };
-      return values[key] ?? defaultValue;
-    });
     logger = {
       debug: jest.fn(),
       info: jest.fn(),
       error: jest.fn(),
       warn: jest.fn(),
     };
-    service = new SelfServiceService(prisma, config, logger);
+    service = new SelfServiceService(prisma, idsHttp, logger);
   });
 
   it('creates an employee transaction after IDS 1:N identification succeeds', async () => {
-    const requestJson = jest
-      .spyOn(service as any, 'requestJson')
-      .mockResolvedValueOnce({
-        status: 200,
-        headers: { 'set-cookie': ['JSESSIONID=session-1; Path=/'] },
-      })
+    idsHttp.requestJson
       .mockResolvedValueOnce({
         status: 200,
         data: { bestCandidate: { subjectId: 'EMP001' } },
@@ -84,8 +72,9 @@ describe('SelfServiceService IDS punch', () => {
       }),
     });
 
-    expect(requestJson).toHaveBeenNthCalledWith(
-      2,
+    expect(idsHttp.login).toHaveBeenCalled();
+    expect(idsHttp.requestJson).toHaveBeenNthCalledWith(
+      1,
       'POST',
       'https://ids.local/api/v2.0/identify?liveness=true',
       expect.objectContaining({

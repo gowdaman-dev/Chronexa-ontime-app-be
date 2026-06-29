@@ -36,6 +36,7 @@ import { ReportsController } from './reports/reports.controller';
 import { ReportsService } from './reports/reports.service';
 import { ReportQueryService } from './shared/report-query.service';
 import { ReportPdfService } from './shared/report-pdf.service';
+import { IdsHttpClient } from './shared/ids-http.client';
 
 @Module({
   imports: [ConfigModule, PrismaModule, LoggingModule],
@@ -61,6 +62,7 @@ import { ReportPdfService } from './shared/report-pdf.service';
     WorkflowCommonService,
     ReportQueryService,
     ReportPdfService,
+    IdsHttpClient,
     MobileCommonService,
     LeavesService,
     ShortPermissionsService,

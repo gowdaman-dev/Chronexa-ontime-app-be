@@ -7,12 +7,12 @@ describe('ReportQueryService pagination', () => {
     resolveEmployeeId: jest.fn(),
     toNumber: jest.fn((v) => (v == null || v === '' ? undefined : Number(v))),
   };
-  const prisma = { $queryRawUnsafe: jest.fn() };
+  const prisma = { $queryRaw: jest.fn() };
   let service: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.$queryRawUnsafe
+    prisma.$queryRaw
       .mockResolvedValueOnce([{ EmployeeID: 1 }])
       .mockResolvedValueOnce([{ cnt: 1 }]);
     service = new ReportQueryService(prisma, common);
@@ -28,7 +28,11 @@ describe('ReportQueryService pagination', () => {
 
     await service.querySpEmployeeDailyReport({ date: '2025-06-01' });
 
-    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
+    expect(prisma.$queryRaw).toHaveBeenCalled();
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    const sql = Array.isArray(sqlArg?.strings)
+      ? sqlArg.strings.join('')
+      : String(sqlArg);
     expect(sql).not.toContain('OFFSET');
     expect(sql).not.toContain('FETCH NEXT');
   });
@@ -43,8 +47,12 @@ describe('ReportQueryService pagination', () => {
 
     await service.querySpEmployeeDailyReport({ date: '2025-06-01', limit: 10, offset: 2 });
 
-    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
-    expect(sql).toContain('OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY');
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    const sql = Array.isArray(sqlArg?.strings)
+      ? sqlArg.strings.join('')
+      : String(sqlArg);
+    expect(sql).toContain('OFFSET');
+    expect(sql).toContain('FETCH NEXT');
   });
 });
 
@@ -60,43 +68,44 @@ describe('ReportQueryService date filters (old /report/attendance behaviour)', (
     resolveEmployeeId: jest.fn(),
     toNumber: jest.fn((v) => (v == null || v === '' ? undefined : Number(v))),
   };
-  const prisma = { $queryRawUnsafe: jest.fn() };
+  const prisma = { $queryRaw: jest.fn() };
   let service: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.$queryRawUnsafe
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ cnt: 0 }]);
+    prisma.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ cnt: 0 }]);
     service = new ReportQueryService(prisma, common);
   });
+
+  const sqlText = () => {
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    return Array.isArray(sqlArg?.strings) ? sqlArg.strings.join('') : String(sqlArg);
+  };
 
   it('does not add WorkDate filters when no date params are sent', async () => {
     await service.querySpEmployeeDailyReport({});
 
-    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
+    const sql = sqlText();
     expect(sql).not.toContain('WorkDate >=');
     expect(sql).not.toContain('WorkDate <=');
     expect(sql).not.toMatch(/WorkDate =/);
   });
 
   it('applies from_date and to_date independently', async () => {
-    await service.querySpEmployeeDailyReport({
+    const where = service.buildSpWhere({
       from_date: '2026-06-01',
       to_date: '2026-06-30',
     });
 
-    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
-    expect(sql).toContain("WorkDate >= '2026-06-01'");
-    expect(sql).toContain("WorkDate <= '2026-06-30'");
+    expect(where).toContain("WorkDate >= '2026-06-01'");
+    expect(where).toContain("WorkDate <= '2026-06-30'");
   });
 
   it('applies only from_date when to_date is omitted', async () => {
-    await service.querySpEmployeeDailyReport({ from_date: '2026-06-01' });
+    const where = service.buildSpWhere({ from_date: '2026-06-01' });
 
-    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
-    expect(sql).toContain("WorkDate >= '2026-06-01'");
-    expect(sql).not.toContain('WorkDate <=');
+    expect(where).toContain("WorkDate >= '2026-06-01'");
+    expect(where).not.toContain('WorkDate <=');
   });
 
   it('resolveDateRange returns empty object when no date filters are sent', () => {

@@ -4,9 +4,10 @@ import { UserServiceService } from './user-service.service';
 import { ConfigModule } from '@app/config';
 import { PrismaModule } from '@app/prisma';
 import { RedisModule } from '@app/redis';
+import { LoggingModule } from '@app/common';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, RedisModule],
+  imports: [ConfigModule, PrismaModule, RedisModule, LoggingModule],
   controllers: [UserServiceController],
   providers: [UserServiceService],
 })

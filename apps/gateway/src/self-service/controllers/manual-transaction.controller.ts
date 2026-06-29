@@ -28,6 +28,7 @@ import {
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { serializeUploadFile, toUserPayload } from '../self-service.helpers';
+import { getMulterUploadOptions } from '../../uploads/multer.options';
 
 @ApiTags('Manual Transaction')
 @Controller({ version: '1' })
@@ -35,7 +36,7 @@ export class ManualTransactionController {
   constructor(private readonly selfService: SelfServiceGatewayService) {}
 
   @Post('employeeManualTransaction/add')
-  @UseInterceptors(FileInterceptor('attachment'))
+  @UseInterceptors(FileInterceptor('attachment', getMulterUploadOptions()))
   @ApiSelfServiceOperation('Add manual movement transaction', ApiAddManualTransactionBody())
   addManualTransaction(
     @CurrentUser() user: AuthUser,
@@ -62,7 +63,7 @@ export class ManualTransactionController {
   }
 
   @Put('employeeManualTransaction/edit/:id')
-  @UseInterceptors(FileInterceptor('attachment'))
+  @UseInterceptors(FileInterceptor('attachment', getMulterUploadOptions()))
   @ApiSelfServiceOperation(
     'Edit manual movement transaction',
     ApiSelfServiceIdParam(),
@@ -140,7 +141,7 @@ export class ManualTransactionController {
   }
 
   @Put('employeeManualTransaction/groupApproveByEmployeeIds')
-  @UseInterceptors(FileInterceptor('attachment'))
+  @UseInterceptors(FileInterceptor('attachment', getMulterUploadOptions()))
   @ApiSelfServiceOperation(
     'Create group manual transactions by employee IDs',
     ApiGroupApproveByEmployeeIdsBody(),
