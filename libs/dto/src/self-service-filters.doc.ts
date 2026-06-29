@@ -235,12 +235,12 @@ export function ApiHolidayFilters() {
     ),
     q(
       'year',
-      'Filter by calendar year of from_date (applied in-memory after fetch)',
+      'Filter by calendar year of from_date (applied at database query level)',
       { type: 'number', example: 2025 },
     ),
     q(
       'month',
-      'Filter by month 1-12 of from_date (requires year; applied in-memory)',
+      'Filter by month 1-12 of from_date (requires year; applied at database query level)',
       { type: 'number', example: 1 },
     ),
     q('recurring_flag', 'Recurring holidays only', { example: 'false' }),

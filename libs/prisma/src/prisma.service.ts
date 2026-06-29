@@ -27,12 +27,9 @@ function normalizeSqlServerConnectionString(
   if (!/;?encrypt=/i.test(normalized)) {
     normalized = `${normalized};encrypt=false`;
   }
-  normalized = appendConnectionParam(normalized, 'connectionTimeout', 30);
-  normalized = appendConnectionParam(
-    normalized,
-    'requestTimeout',
-    dbQueryTimeoutMs,
-  );
+  normalized = appendConnectionParam(normalized, 'Connection Timeout', 30);
+  const requestTimeoutSec = Math.max(30, Math.ceil(dbQueryTimeoutMs / 1000));
+  normalized = appendConnectionParam(normalized, 'Request Timeout', requestTimeoutSec);
   return normalized;
 }
 

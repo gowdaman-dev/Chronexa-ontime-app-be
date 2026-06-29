@@ -18,7 +18,13 @@ export function ApiPaginatedResponse(dataType: string) {
 export function ApiPaginationQueryParams() {
   return applyDecorators(
     ApiQuery({ name: 'limit', type: Number, required: false, example: 20, description: 'Number of records per page' }),
-    ApiQuery({ name: 'offset', type: Number, required: false, example: 1, description: 'Page number (1-based)' }),
+    ApiQuery({
+      name: 'offset',
+      type: Number,
+      required: false,
+      example: 0,
+      description: 'Number of records to skip (0-based). Page 1 uses offset=0.',
+    }),
   );
 }
 

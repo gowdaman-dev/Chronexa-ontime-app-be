@@ -2,7 +2,7 @@ import { Controller, Get, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '@app/auth';
-import { ApiSelfServiceOperation } from '@app/dto/self-service.doc';
+import { ApiReportOperation } from '@app/dto/self-service.doc';
 import { ApiReportFilters } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { renderSelfServiceReport } from '../self-service.helpers';
@@ -13,7 +13,7 @@ export class ReportsController {
   constructor(private readonly selfService: SelfServiceGatewayService) {}
 
   @Get('report/attendance')
-  @ApiSelfServiceOperation(
+  @ApiReportOperation(
     'Attendance report from sp_employee_daily_report. Date filters are independent; omit dates for all matching rows.',
     ApiReportFilters(),
   )
@@ -32,7 +32,7 @@ export class ReportsController {
   }
 
   @Get('report/daily')
-  @ApiSelfServiceOperation('Daily report (JSON or HTML/PDF)', ApiReportFilters())
+  @ApiReportOperation('Daily report (JSON or HTML/PDF)', ApiReportFilters())
   getDailyReport(
     @CurrentUser() user: AuthUser,
     @Query() query: any,
@@ -48,7 +48,7 @@ export class ReportsController {
   }
 
   @Get('report/weekly')
-  @ApiSelfServiceOperation('Weekly report (JSON or HTML/PDF)', ApiReportFilters())
+  @ApiReportOperation('Weekly report (JSON or HTML/PDF)', ApiReportFilters())
   getWeeklyReport(
     @CurrentUser() user: AuthUser,
     @Query() query: any,
@@ -64,7 +64,7 @@ export class ReportsController {
   }
 
   @Get('report/monthly')
-  @ApiSelfServiceOperation('Monthly report (JSON or HTML/PDF)', ApiReportFilters())
+  @ApiReportOperation('Monthly report (JSON or HTML/PDF)', ApiReportFilters())
   getMonthlyReport(
     @CurrentUser() user: AuthUser,
     @Query() query: any,
