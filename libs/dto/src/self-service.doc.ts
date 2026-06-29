@@ -13,6 +13,13 @@ import { IdsPunchDto, IdsVerifyEncounterDto, VerifyLocationDto } from './self-se
 type JsonExample = Record<string, unknown>;
 type OpenApiSchema = Record<string, unknown>;
 
+const MULTIPART_FILE_MAX_MB = 10;
+const multipartFileProperty = {
+  type: 'string',
+  format: 'binary',
+  description: `File upload (max ${MULTIPART_FILE_MAX_MB} MB by default; override with MAX_UPLOAD_BYTES env)`,
+};
+
 export function ApiCoordinatesProperty(options?: ApiPropertyOptions) {
   return applyDecorators(
     ApiProperty({
@@ -264,6 +271,8 @@ const simpleOperationExamples: Record<string, JsonExample> = {
   'Get pending leave requests': paginatedExample([leaveSample]),
   'Get leave request by ID': simpleDataExample(leaveSample),
   'Get leave requests by employee ID': paginatedExample([leaveSample]),
+  'Get leave requests for employee ID (legacy path; :id is employee_id, not leave PK)':
+    paginatedExample([leaveSample]),
   'Approve or reject leave request': {
     message: 'Employee leave approved successfully',
     employee_leave_id: 13362,
@@ -419,6 +428,10 @@ const simpleOperationExamples: Record<string, JsonExample> = {
     message: 'Employee event transaction created successfully',
     data: { transaction_id: 12345, reason: 'IN' },
   },
+  'Geo-fenced punch: verify location and create event transaction': {
+    message: 'Employee event transaction created successfully',
+    data: { transaction_id: 12345, reason: 'IN' },
+  },
   'Create event transaction by employee number (subject_id)': {
     message: 'Employee event transaction created successfully',
     data: { transaction_id: 12346, reason: 'OUT' },
@@ -444,6 +457,10 @@ const simpleOperationExamples: Record<string, JsonExample> = {
   'Daily attendance report from sp_employee_daily_report': paginatedExample([
     { EmployeeID: 1001, WorkDate: '2026-06-10', PunchIn: '09:00', PunchOut: '17:30' },
   ]),
+  'Attendance report from sp_employee_daily_report. Date filters are independent; omit dates for all matching rows.':
+    paginatedExample([
+      { EmployeeID: 1001, WorkDate: '2026-06-10', PunchIn: '09:00', PunchOut: '17:30' },
+    ]),
   'Daily report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
   'Weekly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
   'Monthly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
@@ -490,7 +507,7 @@ export function ApiIdsPunchOperation() {
         type: 'object',
         required: ['image', 'reason', 'geolocation'],
         properties: {
-          image: { type: 'string', format: 'binary' },
+          image: multipartFileProperty,
           reason: { type: 'string', example: 'IN' },
           user_entry_flag: { type: 'string', example: 'true' },
           device_id: { type: 'string', example: '1' },
@@ -516,6 +533,8 @@ export function ApiIdsPunchOperation() {
       'Verification failed or invalid input',
       'Verification failed',
     ),
+    apiErrorResponse(413, 'Uploaded file exceeds MAX_UPLOAD_BYTES', 'Payload Too Large'),
+    apiErrorResponse(504, 'IDS server timeout', 'Gateway Timeout'),
   );
 }
 
@@ -528,7 +547,7 @@ export function ApiIdsVerifyEncounterOperation() {
         type: 'object',
         required: ['image', 'subjectId', 'reason', 'geolocation'],
         properties: {
-          image: { type: 'string', format: 'binary' },
+          image: multipartFileProperty,
           subjectId: { type: 'string', example: 'E001' },
           reason: { type: 'string', example: 'IN' },
           user_entry_flag: { type: 'string', example: 'true' },
@@ -555,6 +574,8 @@ export function ApiIdsVerifyEncounterOperation() {
       'Verification failed or invalid input',
       'Verification failed',
     ),
+    apiErrorResponse(413, 'Uploaded file exceeds MAX_UPLOAD_BYTES', 'Payload Too Large'),
+    apiErrorResponse(504, 'IDS server timeout', 'Gateway Timeout'),
   );
 }
 
@@ -576,6 +597,43 @@ export function ApiSelfServiceOperation(summary: string, ...extras: MethodDecora
     apiErrorResponse(401, 'Missing or invalid access token', 'Unauthorized'),
     apiErrorResponse(404, 'Resource not found', 'Resource not found'),
     apiErrorResponse(500, 'Unexpected backend error', 'Internal server error'),
+    apiErrorResponse(504, 'Upstream microservice or IDS timeout', 'Gateway Timeout'),
+  );
+}
+
+/** Report endpoints that may return JSON, HTML, or PDF depending on format query param. */
+export function ApiReportOperation(summary: string, ...extras: MethodDecorator[]) {
+  return applyDecorators(
+    ApiOperation({ summary }),
+    ...extras,
+    apiJsonResponse(
+      200,
+      'JSON report when format is omitted or format=json',
+      getSimpleOperationExample(summary),
+    ),
+    ApiResponse({
+      status: 200,
+      description: 'HTML report when format=html',
+      content: {
+        'text/html': {
+          schema: { type: 'string', example: '<html><body>Attendance report</body></html>' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'PDF report when format=pdf',
+      content: {
+        'application/pdf': {
+          schema: { type: 'string', format: 'binary' },
+        },
+      },
+    }),
+    apiErrorResponse(400, 'Invalid request', 'Invalid input'),
+    apiErrorResponse(401, 'Missing or invalid access token', 'Unauthorized'),
+    apiErrorResponse(404, 'Resource not found', 'Resource not found'),
+    apiErrorResponse(500, 'Unexpected backend error', 'Internal server error'),
+    apiErrorResponse(504, 'Report generation or upstream service timeout', 'Gateway Timeout'),
   );
 }
 
@@ -662,7 +720,7 @@ export function ApiGroupApproveByEmployeeIdsBody() {
           reason: { type: 'string', example: 'IN' },
           transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
           remarks: { type: 'string', example: 'Group manual entry' },
-          attachment: { type: 'string', format: 'binary' },
+          attachment: multipartFileProperty,
         },
       },
     }),
@@ -682,10 +740,11 @@ export function ApiAddLeaveBody() {
           to_date: { type: 'string', example: '2026-06-11' },
           number_of_leaves: { type: 'number', example: 2 },
           employee_remarks: { type: 'string', example: 'Annual leave' },
-          leave_doc: { type: 'string', format: 'binary' },
+          leave_doc: multipartFileProperty,
         },
       },
     }),
+    apiErrorResponse(413, 'Uploaded file exceeds MAX_UPLOAD_BYTES', 'Payload Too Large'),
   );
 }
 
@@ -721,10 +780,11 @@ export function ApiAddManualTransactionBody() {
           transaction_time: { type: 'string', example: '2026-06-10T08:00:00' },
           remarks: { type: 'string', example: 'Forgot to punch' },
           emp_missing_movement_id: { type: 'number', example: 501 },
-          attachment: { type: 'string', format: 'binary' },
+          attachment: multipartFileProperty,
         },
       },
     }),
+    apiErrorResponse(413, 'Uploaded file exceeds MAX_UPLOAD_BYTES', 'Payload Too Large'),
   );
 }
 
