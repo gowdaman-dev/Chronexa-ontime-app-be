@@ -31,6 +31,13 @@ describe('LeavesService', () => {
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       dateFilter: jest.fn(),
       mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
+      resolveEmployeeId: jest.fn((query: any) =>
+        query?.employeeId !== undefined
+          ? Number(query.employeeId)
+          : query?.employee_id !== undefined
+            ? Number(query.employee_id)
+            : undefined,
+      ),
       buildLeaveAllDateFilter: jest.fn(() => ({})),
       buildLeaveTeamDateFilter: jest.fn(() => ({})),
       buildLeaveEmployeeGetDateFilter: jest.fn(() => ({})),
@@ -74,13 +81,20 @@ describe('LeavesService', () => {
     );
   });
 
-  it('returns paginated leave requests', async () => {
-    prisma.employee_leaves.findMany.mockResolvedValue([{ employee_leave_id: 1 }]);
+  it('returns paginated leave requests with employee_master alias', async () => {
+    prisma.employee_leaves.findMany.mockResolvedValue([
+      {
+        employee_leave_id: 1,
+        employee_master_employee_leaves_employee_idToemployee_master: {
+          emp_no: 'E001',
+        },
+      },
+    ]);
     prisma.employee_leaves.count.mockResolvedValue(1);
 
     await expect(service.all({ query: {} })).resolves.toEqual({
       success: true,
-      data: [{ employee_leave_id: 1 }],
+      data: [{ employee_leave_id: 1, employee_master: { emp_no: 'E001' } }],
       total: 1,
       hasNext: false,
     });

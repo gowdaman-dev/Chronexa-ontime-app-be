@@ -20,6 +20,7 @@ import {
 import {
   ApiShortPermissionListFilters,
   ApiShortPermissionSearchFilters,
+  ApiShortPermissionTeamFilters,
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { toUserPayload } from '../self-service.helpers';
@@ -124,7 +125,7 @@ export class ShortPermissionController {
   }
 
   @Get('employeeShortPermission/team/all')
-  @ApiSelfServiceOperation('Get team short permission requests', ApiShortPermissionListFilters())
+  @ApiSelfServiceOperation('Get team short permission requests', ApiShortPermissionTeamFilters())
   getTeamShortPermissions(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.short_permissions.team_all', {
       user: toUserPayload(user),

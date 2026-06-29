@@ -27,6 +27,7 @@ describe('ShortPermissionsService', () => {
       parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
       parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
       dateFilter: jest.fn(() => undefined),
+      mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
       applyEmployeeOrgScope: jest.fn((where: any) => where),
       compact: jest.fn((value: any) =>
         Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
@@ -72,15 +73,39 @@ describe('ShortPermissionsService', () => {
 
   it('returns paginated short permission requests', async () => {
     prisma.employee_short_permissions.findMany.mockResolvedValue([
-      { short_permission_id: 1 },
+      {
+        short_permission_id: 1,
+        employee_master_employee_short_permissions_employee_idToemployee_master: {
+          emp_no: 'E001',
+        },
+      },
     ]);
     prisma.employee_short_permissions.count.mockResolvedValue(1);
 
     await expect(service.all({ query: {} })).resolves.toEqual({
       success: true,
-      data: [{ short_permission_id: 1 }],
+      data: [{ short_permission_id: 1, employee_master: { emp_no: 'E001' } }],
       total: 1,
       hasNext: false,
     });
+  });
+
+  it('scopes team/all by manager with pending and employeeId filters', async () => {
+    prisma.employee_short_permissions.findMany.mockResolvedValue([]);
+    prisma.employee_short_permissions.count.mockResolvedValue(0);
+
+    await service.teamAll({
+      user: { employeeId: 77001 },
+      query: { pending: 'true', employeeId: 78237, from_date: '2026-05-01' },
+    });
+
+    expect(prisma.employee_short_permissions.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employee_id: 78237,
+          approve_reject_flag: 0,
+        }),
+      }),
+    );
   });
 });

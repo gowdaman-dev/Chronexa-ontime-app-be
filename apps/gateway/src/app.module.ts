@@ -8,6 +8,7 @@ import { EmployeeServiceModule } from './employee-service/employee-service.modul
 import { AuthServiceModule } from './auth-service/auth-service.module';
 import { AuthServiceService } from './auth-service/auth-service.service';
 import { SelfServiceModule } from './self-service/self-service.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SelfServiceModule } from './self-service/self-service.module';
     UserServiceModule,
     EmployeeServiceModule,
     SelfServiceModule,
+    UploadsModule,
   ],
   controllers: [],
   providers: [

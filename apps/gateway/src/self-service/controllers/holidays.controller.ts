@@ -19,7 +19,6 @@ import {
 import {
   ApiHolidayFilters,
   ApiHolidayUpcomingFilters,
-  ApiPaginationFilters,
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { toUserPayload } from '../self-service.helpers';
@@ -36,7 +35,7 @@ export class HolidaysController {
   }
 
   @Get('holiday/upcoming')
-  @ApiSelfServiceOperation('Upcoming holidays', ApiHolidayUpcomingFilters(), ApiPaginationFilters())
+  @ApiSelfServiceOperation('Upcoming holidays', ApiHolidayUpcomingFilters())
   getUpcomingHolidays(@Query() query: any) {
     return this.selfService.workflow('self_service.holidays.upcoming', { query });
   }
