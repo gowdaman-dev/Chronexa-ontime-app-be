@@ -73,8 +73,8 @@ export class LeaveController {
   @Get('employeeLeave/byEmployee/:id')
   @ApiSelfServiceOperation(
     'Get leave requests by employee ID',
-    ApiSelfServiceIdParam(),
-    ApiLeaveListFilters(),
+    ApiSelfServiceIdParam('id', 'Employee ID'),
+    ApiLeaveEmployeeGetFilters(),
   )
   getEmployeeLeavesByEmployee(@Param('id') id: string, @Query() query: any) {
     return this.selfService.workflow('self_service.leaves.by_employee', {
