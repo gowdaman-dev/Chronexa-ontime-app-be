@@ -57,6 +57,9 @@ export class LeavesService {
   private employeeRelationKey =
     'employee_master_employee_leaves_employee_idToemployee_master';
 
+  private leaveApproverRelationKey =
+    'employee_master_employee_leaves_approver_idToemployee_master';
+
   private mapLeaveRow(row: any) {
     if (!row || typeof row !== 'object') return row;
     const mapped = { ...row };
@@ -66,6 +69,12 @@ export class LeavesService {
       mapped.employee_master = employee;
       delete mapped[this.employeeRelationKey];
     }
+    const approver =
+      mapped[this.leaveApproverRelationKey] ?? mapped.approver_master;
+    if (approver) {
+      mapped.approver_master = approver;
+    }
+    delete mapped[this.leaveApproverRelationKey];
     return mapped;
   }
 
