@@ -46,7 +46,7 @@ export class ManualTransactionsService {
 
   private whereFromQuery(query: Record<string, any> = {}) {
     const where: any = {};
-    const employeeId = this.common.toNumber(query.employee_id);
+    const employeeId = this.common.resolveEmployeeId(query);
     if (employeeId) where.employee_id = employeeId;
     if (query.status) where.transaction_status = query.status;
     const dateFilter = this.common.dateFilter(query.from_date, query.to_date);

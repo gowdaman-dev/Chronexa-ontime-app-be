@@ -46,7 +46,11 @@ export function ApiLeaveListFilters() {
     ),
     q('transaction_from_date', 'Created date range start (filters created_date)', { example: '2025-01-01' }),
     q('transaction_to_date', 'Created date range end (filters created_date)', { example: '2025-12-31' }),
-    q('search', 'Search employee name or emp number', { example: 'john' }),
+    q(
+      'search',
+      'On /all and /pending: employee name or emp number. On /team/all: also matches leave type name.',
+      { example: 'john' },
+    ),
     q('employee_number', 'Filter by employee number', { example: 'E001' }),
     q('employee_name', 'Filter by employee name', { example: 'John' }),
     q('manager_id', 'Filter by manager employee ID', { type: 'number', example: 900 }),
@@ -77,6 +81,7 @@ export function ApiShortPermissionListFilters() {
   return applyDecorators(
     ApiPaginationFilters(),
     q('employee_id', 'Filter by employee ID', { type: 'number', example: 1001 }),
+    q('employeeId', 'Alias for employee_id', { type: 'number', example: 1001 }),
     q('status', 'Approval status (0=pending, 1=approved, 2=rejected)', { type: 'number', example: 0 }),
     q('approve_reject_flag', 'Alias for status', { type: 'number', example: 0 }),
     q(
@@ -142,9 +147,13 @@ export function ApiManualTransactionFilters() {
     ApiPaginationFilters(),
     q('employee_id', 'Filter by employee ID', { type: 'number', example: 1001 }),
     q('employeeId', 'Alias for employee_id', { type: 'number', example: 1001 }),
-    q('status', 'Transaction status: Pending | Approved | Rejected', { example: 'Pending' }),
-    q('pending', 'Alias for status on team/all', { example: 'Pending' }),
-    q('search', 'Search team employee name or emp number (team/all)', { example: 'john' }),
+    q(
+      'status',
+      'Transaction status: Pending | Approved | Rejected. Supported on /all and /team/all.',
+      { example: 'Pending' },
+    ),
+    q('pending', 'Alias for status (team/all only)', { example: 'Pending' }),
+    q('search', 'Search team employee name or emp number (/team/all only)', { example: 'john' }),
     q('from_date', 'Transaction time range start', { example: '2025-01-01' }),
     q('to_date', 'Transaction time range end', { example: '2025-12-31' }),
   );
@@ -160,7 +169,11 @@ export function ApiEventTransactionFilters() {
     q('startDate', 'Alias for from_date', { example: '2025-01-01' }),
     q('endDate', 'Alias for to_date', { example: '2025-12-31' }),
     q('reason', 'Punch reason: IN or OUT', { example: 'IN' }),
-    q('search', 'Search reason or remarks', { example: 'IN' }),
+    q(
+      'search',
+      'IN or OUT (exact reason match) or employee name/emp number (resolves to employee_id IN). On /team/all, search is scoped to the manager team.',
+      { example: 'IN' },
+    ),
     q('organization_id', 'Filter by organization ID', { type: 'number', example: 27 }),
     q('department_id', 'Filter by department ID', { type: 'number', example: 5 }),
     q('manager_id', 'Filter by manager employee ID', { type: 'number', example: 900 }),
@@ -172,6 +185,17 @@ export function ApiTodayStatusFilters() {
     q('employee_id', 'Employee ID (required)', { type: 'number', example: 1001, required: true }),
     q('employeeId', 'Alias for employee_id', { type: 'number', example: 1001 }),
     q('date', 'Work date (YYYY-MM-DD). Omit for server default work date.', { example: '2025-06-01' }),
+  );
+}
+
+/** /employeeEventTransaction/punchStatus — optional employee scope; defaults to token employee. */
+export function ApiPunchStatusFilters() {
+  return applyDecorators(
+    q('employee_id', 'Employee ID. Omit to use the authenticated user employee.', {
+      type: 'number',
+      example: 1001,
+    }),
+    q('employeeId', 'Alias for employee_id', { type: 'number', example: 1001 }),
   );
 }
 

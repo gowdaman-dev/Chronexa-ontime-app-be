@@ -169,7 +169,7 @@ const leaveSample = {
   approve_reject_flag: 0,
   leave_status: 'PENDING',
   leave_doc_filename_path: '/uploads/leave-document.pdf',
-  employee_master_employee_leaves_employee_idToemployee_master: employeeSample,
+  employee_master: employeeSample,
 };
 
 const shortPermissionSample = {
@@ -183,8 +183,7 @@ const shortPermissionSample = {
   perm_minutes: 60,
   remarks: 'Doctor appointment',
   approve_reject_flag: 0,
-  employee_master_employee_short_permissions_employee_idToemployee_master:
-    employeeSample,
+  employee_master: employeeSample,
 };
 
 const missingMovementSample = {
