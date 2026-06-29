@@ -223,7 +223,9 @@ export class ShortPermissionsService {
     allowedOrgIds?: number[],
   ) {
     const where: any = {};
-    const employeeId = this.common.toNumber(query.employee_id);
+    const employeeId =
+      this.common.resolveEmployeeId(query) ??
+      this.common.toNumber(query.employee_id);
     const managerId = this.common.toNumber(query.manager_id);
     const status =
       this.common.toNumber(query.status) ??

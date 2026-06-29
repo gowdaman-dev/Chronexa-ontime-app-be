@@ -44,6 +44,64 @@ export class EventTransactionsService {
     }
   }
 
+  private applyEmployeeIdScope(where: Record<string, any>, ids: number[]) {
+    if (!ids.length) {
+      where.employee_id = -1;
+      return;
+    }
+    const current = where.employee_id;
+    if (current === undefined) {
+      where.employee_id = { in: ids };
+      return;
+    }
+    if (typeof current === 'number') {
+      where.employee_id = ids.includes(current) ? current : -1;
+      return;
+    }
+    if (Array.isArray(current?.in)) {
+      const intersection = current.in.filter((id: number) => ids.includes(id));
+      where.employee_id = intersection.length ? { in: intersection } : -1;
+    }
+  }
+
+  private async applySearchFilter(
+    where: Record<string, any>,
+    search: string,
+    scopeEmployeeIds?: number[],
+  ) {
+    const term = String(search).trim();
+    if (!term) return;
+
+    const upper = term.toUpperCase();
+    if (upper === 'IN' || upper === 'OUT') {
+      where.reason = upper;
+      return;
+    }
+
+    const employeeWhere: Record<string, any> = {
+      OR: [
+        { firstname_eng: { contains: term } },
+        { lastname_eng: { contains: term } },
+        { firstname_arb: { contains: term } },
+        { lastname_arb: { contains: term } },
+        { emp_no: { contains: term } },
+      ],
+    };
+    if (scopeEmployeeIds?.length) {
+      employeeWhere.employee_id = { in: scopeEmployeeIds };
+    }
+
+    const matched = await this.prisma.employee_master.findMany({
+      where: employeeWhere,
+      select: { employee_id: true },
+      take: 500,
+    });
+    this.applyEmployeeIdScope(
+      where,
+      matched.map((employee) => employee.employee_id),
+    );
+  }
+
   private async whereFromQuery(
     query: Record<string, any> = {},
     managerId?: number,
@@ -71,20 +129,11 @@ export class EventTransactionsService {
 
     if (query.reason) where.reason = String(query.reason);
     if (query.search) {
-      const term = String(query.search);
-      where.OR = [
-        { reason: { contains: term } },
-        { remarks: { contains: term } },
-        {
-          employee_master: {
-            OR: [
-              { firstname_eng: { contains: term } },
-              { lastname_eng: { contains: term } },
-              { emp_no: { contains: term } },
-            ],
-          },
-        },
-      ];
+      await this.applySearchFilter(
+        where,
+        String(query.search),
+        teamEmployeeIds,
+      );
     }
 
     const organizationId = this.common.toNumber(query.organization_id);

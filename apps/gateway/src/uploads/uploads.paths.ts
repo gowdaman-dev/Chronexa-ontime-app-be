@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 
 const UPLOADS_CANDIDATES = [
   resolve(process.cwd(), 'uploads'),
+  resolve(__dirname, '../../../uploads'),
   resolve(__dirname, '../../../../uploads'),
 ];
 

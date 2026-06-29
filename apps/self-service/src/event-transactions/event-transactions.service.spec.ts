@@ -12,7 +12,7 @@ describe('EventTransactionsService', () => {
         count: jest.fn(),
         create: jest.fn(),
       },
-      employee_master: { findFirst: jest.fn() },
+      employee_master: { findFirst: jest.fn(), findMany: jest.fn() },
       holidays: { findMany: jest.fn() },
       locations: { findMany: jest.fn() },
       $queryRawUnsafe: jest.fn(),
@@ -59,6 +59,39 @@ describe('EventTransactionsService', () => {
       total: 1,
       hasNext: false,
     });
+  });
+
+  it('maps search=IN to exact reason filter', async () => {
+    prisma.employee_event_transactions.findMany.mockResolvedValue([]);
+    prisma.employee_event_transactions.count.mockResolvedValue(0);
+
+    await service.all({ query: { search: 'IN' } });
+
+    expect(prisma.employee_event_transactions.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ reason: 'IN' }),
+      }),
+    );
+    expect(prisma.employee_master.findMany).not.toHaveBeenCalled();
+  });
+
+  it('scopes team search to employee ids', async () => {
+    prisma.employee_master.findMany
+      .mockResolvedValueOnce([{ employee_id: 78237 }])
+      .mockResolvedValueOnce([{ employee_id: 78237 }]);
+    prisma.employee_event_transactions.findMany.mockResolvedValue([]);
+    prisma.employee_event_transactions.count.mockResolvedValue(0);
+
+    await service.teamAll({
+      user: { employeeId: 77001 },
+      query: { search: 'hari' },
+    });
+
+    expect(prisma.employee_event_transactions.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ employee_id: { in: [78237] } }),
+      }),
+    );
   });
 
   it('creates an event transaction', async () => {
