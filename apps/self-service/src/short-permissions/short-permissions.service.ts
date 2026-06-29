@@ -78,6 +78,12 @@ export class ShortPermissionsService {
       mapped.employee_master = employee;
       delete mapped[this.permissionEmployeeRelationKey];
     }
+    const approver =
+      mapped[this.permissionApproverRelationKey] ?? mapped.approver_master;
+    if (approver) {
+      mapped.approver_master = approver;
+    }
+    delete mapped[this.permissionApproverRelationKey];
     return mapped;
   }
 
@@ -85,9 +91,7 @@ export class ShortPermissionsService {
     const where: any = {
       [this.permissionEmployeeRelationKey]: { manager_id: managerId },
     };
-    const employeeId =
-      this.common.toNumber(query.employee_id) ??
-      this.common.toNumber(query.employeeId);
+    const employeeId = this.common.resolveEmployeeId(query);
     if (employeeId) where.employee_id = employeeId;
 
     if (
@@ -146,6 +150,9 @@ export class ShortPermissionsService {
 
   private permissionEmployeeRelationKey =
     'employee_master_employee_short_permissions_employee_idToemployee_master';
+
+  private permissionApproverRelationKey =
+    'employee_master_employee_short_permissions_approver_idToemployee_master';
 
   private async listShortPermissions(
     query: Record<string, any>,
