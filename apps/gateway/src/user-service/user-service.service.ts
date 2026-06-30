@@ -67,4 +67,20 @@ export class UserServiceService {
   deleteEmployee(id: number) {
     return this.send('employee.delete', { id });
   }
+
+  getDepartmentLookups(query: { search?: string; limit?: number; offset?: number }) {
+    return this.send('lookup.departments', query);
+  }
+
+  getDesignationLookups(query: { search?: string; limit?: number; offset?: number }) {
+    return this.send('lookup.designations', query);
+  }
+
+  getOrganizationLookups(query: { search?: string; limit?: number; offset?: number }) {
+    return this.send('lookup.organizations', query);
+  }
+
+  getCitizenshipLookups(query: { search?: string; limit?: number; offset?: number }) {
+    return this.send('lookup.citizenships', query);
+  }
 }

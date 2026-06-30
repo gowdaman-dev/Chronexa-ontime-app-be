@@ -100,6 +100,15 @@
         "tsConfigPath": "apps/self-service/tsconfig.app.json"
       }
     },
+    "report-service": {
+      "type": "application",
+      "root": "apps/report-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/report-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/report-service/tsconfig.app.json"
+      }
+    },
     "user-service": {
       "type": "application",
       "root": "apps/user-service",

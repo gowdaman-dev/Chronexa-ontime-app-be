@@ -30,10 +30,13 @@ export class HolidaysService {
       query.to_date,
     );
     if (!from && !to) return {};
-    const conditions: Record<string, any>[] = [];
-    if (from) conditions.push({ to_date: { gte: from } });
-    if (to) conditions.push({ from_date: { lte: to } });
-    return conditions.length === 1 ? conditions[0] : { AND: conditions };
+    if (from && to) {
+      return {
+        AND: [{ to_date: { gte: from } }, { from_date: { lte: to } }],
+      };
+    }
+    const range = this.common.dateFilter(query.from_date, query.to_date);
+    return range ? { from_date: range } : {};
   }
 
   private whereFromQuery(query: Record<string, any> = {}) {

@@ -54,6 +54,26 @@ describe('ReportQueryService pagination', () => {
     expect(sql).toContain('OFFSET');
     expect(sql).toContain('FETCH NEXT');
   });
+
+  it('omits OFFSET/FETCH when unlimited=true is sent', async () => {
+    common.parseReportPagination.mockReturnValue({
+      unlimited: true,
+      offset: 1,
+      skip: 0,
+      take: 0,
+    });
+
+    await service.querySpEmployeeDailyReport({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+      unlimited: 'true',
+    });
+
+    const sql = String(prisma.$queryRawUnsafe.mock.calls[0][0]);
+    expect(sql).toContain("WorkDate >= '2026-06-22'");
+    expect(sql).toContain("WorkDate <= '2026-06-28'");
+    expect(sql).not.toContain('OFFSET');
+  });
 });
 
 describe('ReportQueryService date filters (old /report/attendance behaviour)', () => {

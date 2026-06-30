@@ -14,6 +14,19 @@ import {
   ApiCitizenshipIdProperty,
   ApiEmployeeTypeIdProperty,
   ApiDepartmentIdProperty,
+  ApiDepartmentEngProperty,
+  ApiDepartmentArbProperty,
+  ApiOrganizationEngProperty,
+  ApiOrganizationArbProperty,
+  ApiVerticalIdProperty,
+  ApiVerticalEngProperty,
+  ApiVerticalArbProperty,
+  ApiDesignationEngProperty,
+  ApiDesignationArbProperty,
+  ApiCitizenshipEngProperty,
+  ApiCitizenshipArbProperty,
+  ApiNationalityEngProperty,
+  ApiNationalityArbProperty,
   ApiManagerIdProperty,
   ApiLocationIdProperty,
   ApiContractCompanyIdProperty,
@@ -370,11 +383,62 @@ export class EmployeeResponseDto {
   @ApiMobileProperty({ required: false })
   mobile?: string | null;
 
+  @ApiOrganizationIdProperty({ required: false })
+  organizationId?: number | null;
+
+  @ApiOrganizationEngProperty({ required: false })
+  organizationEng?: string | null;
+
+  @ApiOrganizationArbProperty({ required: false })
+  organizationArb?: string | null;
+
+  @ApiVerticalIdProperty({ required: false })
+  verticalId?: number | null;
+
+  @ApiVerticalEngProperty({ required: false })
+  verticalEng?: string | null;
+
+  @ApiVerticalArbProperty({ required: false })
+  verticalArb?: string | null;
+
   @ApiDepartmentIdProperty({ required: false })
   departmentId?: number | null;
 
+  @ApiDepartmentEngProperty({ required: false })
+  departmentEng?: string | null;
+
+  @ApiDepartmentArbProperty({ required: false })
+  departmentArb?: string | null;
+
   @ApiDesignationIdProperty({ required: false })
   designationId?: number | null;
+
+  @ApiDesignationEngProperty({ required: false })
+  designationEng?: string | null;
+
+  @ApiDesignationArbProperty({ required: false })
+  designationArb?: string | null;
+
+  @ApiCitizenshipIdProperty({ required: false })
+  citizenshipId?: number | null;
+
+  @ApiCitizenshipEngProperty({ required: false })
+  citizenshipEng?: string | null;
+
+  @ApiCitizenshipArbProperty({ required: false })
+  citizenshipArb?: string | null;
+
+  @ApiNationalityEngProperty({ required: false })
+  nationalityEng?: string | null;
+
+  @ApiNationalityArbProperty({ required: false })
+  nationalityArb?: string | null;
+
+  @ApiGenderProperty({ required: false })
+  gender?: string | null;
+
+  @ApiJoinDateProperty({ required: false })
+  joinDate?: Date | string | null;
 
   @ApiActiveFlagProperty({ required: false })
   activeFlag?: boolean | null;

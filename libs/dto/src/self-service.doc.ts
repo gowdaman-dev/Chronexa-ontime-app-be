@@ -464,6 +464,10 @@ const simpleOperationExamples: Record<string, JsonExample> = {
   'Daily report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
   'Weekly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
   'Monthly report (JSON or HTML/PDF)': paginatedExample([{ EmployeeID: 1001, WorkDate: '2026-06-10' }]),
+  'Download user manual': {
+    description: 'Binary PDF download (Content-Type: application/pdf)',
+    filename: 'chronexa-user-manual.pdf',
+  },
 };
 
 function getSimpleOperationExample(summary: string): JsonExample {

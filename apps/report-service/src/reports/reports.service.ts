@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService } from '@app/common';
-import { WorkflowCommonService } from '../shared/workflow-common.service';
+import { ReportCommonService } from '../shared/report-common.service';
 import { ReportQueryService } from '../shared/report-query.service';
 import { ReportPdfService } from '../shared/report-pdf.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
-    private readonly common: WorkflowCommonService,
+    private readonly common: ReportCommonService,
     private readonly reportQuery: ReportQueryService,
     private readonly reportPdf: ReportPdfService,
     private readonly logger: AppLoggerService,
