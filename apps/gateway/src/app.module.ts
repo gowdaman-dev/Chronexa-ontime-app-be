@@ -8,6 +8,7 @@ import { EmployeeServiceModule } from './employee-service/employee-service.modul
 import { AuthServiceModule } from './auth-service/auth-service.module';
 import { AuthServiceService } from './auth-service/auth-service.service';
 import { SelfServiceModule } from './self-service/self-service.module';
+import { ReportServiceModule } from './report-service/report-service.module';
 import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { UploadsModule } from './uploads/uploads.module';
     UserServiceModule,
     EmployeeServiceModule,
     SelfServiceModule,
+    ReportServiceModule,
     UploadsModule,
   ],
   controllers: [],

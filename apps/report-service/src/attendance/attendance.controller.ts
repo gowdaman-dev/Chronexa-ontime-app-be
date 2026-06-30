@@ -6,7 +6,7 @@ import { AttendanceService } from './attendance.service';
 export class AttendanceController {
   constructor(private readonly attendance: AttendanceService) {}
 
-  @MessagePattern('self_service.attendance.daily')
+  @MessagePattern('report.attendance.daily')
   daily(@Payload() data: any) {
     return this.attendance.daily(data);
   }

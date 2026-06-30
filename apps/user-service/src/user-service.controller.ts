@@ -60,4 +60,24 @@ export class UserServiceController {
   deleteEmployee(@Payload() data: { id: number }) {
     return this.userServiceService.deleteEmployee(data.id);
   }
+
+  @MessagePattern('lookup.departments')
+  getDepartmentLookups(@Payload() data: { search?: string; limit?: number; offset?: number }) {
+    return this.userServiceService.getDepartmentLookups(data);
+  }
+
+  @MessagePattern('lookup.designations')
+  getDesignationLookups(@Payload() data: { search?: string; limit?: number; offset?: number }) {
+    return this.userServiceService.getDesignationLookups(data);
+  }
+
+  @MessagePattern('lookup.organizations')
+  getOrganizationLookups(@Payload() data: { search?: string; limit?: number; offset?: number }) {
+    return this.userServiceService.getOrganizationLookups(data);
+  }
+
+  @MessagePattern('lookup.citizenships')
+  getCitizenshipLookups(@Payload() data: { search?: string; limit?: number; offset?: number }) {
+    return this.userServiceService.getCitizenshipLookups(data);
+  }
 }

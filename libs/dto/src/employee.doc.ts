@@ -80,6 +80,84 @@ export function ApiDepartmentIdProperty(options?: ApiPropertyOptions) {
   );
 }
 
+export function ApiDepartmentEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Information Technology', description: 'Department name in English', ...options }),
+  );
+}
+
+export function ApiDepartmentArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'تقنية المعلومات', description: 'Department name in Arabic', ...options }),
+  );
+}
+
+export function ApiOrganizationEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Aldar HQ', description: 'Organization name in English', ...options }),
+  );
+}
+
+export function ApiOrganizationArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الدار', description: 'Organization name in Arabic', ...options }),
+  );
+}
+
+export function ApiVerticalIdProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 2, description: 'Parent vertical organization ID', ...options }),
+  );
+}
+
+export function ApiVerticalEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Real Estate', description: 'Vertical (parent organization) name in English', ...options }),
+  );
+}
+
+export function ApiVerticalArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'العقارات', description: 'Vertical (parent organization) name in Arabic', ...options }),
+  );
+}
+
+export function ApiDesignationEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Software Engineer', description: 'Designation/job title in English', ...options }),
+  );
+}
+
+export function ApiDesignationArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'مهندس برمجيات', description: 'Designation/job title in Arabic', ...options }),
+  );
+}
+
+export function ApiCitizenshipEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'United Arab Emirates', description: 'Nationality/citizenship in English', ...options }),
+  );
+}
+
+export function ApiCitizenshipArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الإمارات العربية المتحدة', description: 'Nationality/citizenship in Arabic', ...options }),
+  );
+}
+
+export function ApiNationalityEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'United Arab Emirates', description: 'Nationality name in English (alias of citizenshipEng)', ...options }),
+  );
+}
+
+export function ApiNationalityArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الإمارات العربية المتحدة', description: 'Nationality name in Arabic (alias of citizenshipArb)', ...options }),
+  );
+}
+
 export function ApiManagerIdProperty(options?: ApiPropertyOptions) {
   return applyDecorators(
     ApiProperty({ example: 10, description: 'Manager employee ID', ...options }),

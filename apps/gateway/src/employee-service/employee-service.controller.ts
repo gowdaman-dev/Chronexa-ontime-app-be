@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@app/auth';
 import { UserServiceService } from '../user-service/user-service.service';
 import { CreateEmployeeDto, UpdateEmployeeDto, PaginationQueryDto } from '@app/dto';
@@ -9,6 +9,10 @@ import {
   ApiGetEmployeeByIdOperation,
   ApiUpdateEmployeeOperation,
   ApiDeleteEmployeeOperation,
+  ApiGetDepartmentLookupsOperation,
+  ApiGetDesignationLookupsOperation,
+  ApiGetOrganizationLookupsOperation,
+  ApiGetCitizenshipLookupsOperation,
 } from '@app/dto/employee.doc';
 import { ApiPaginationQueryParams } from '@app/dto/pagination.doc';
 
@@ -29,6 +33,38 @@ export class EmployeeServiceController {
   @ApiPaginationQueryParams()
   findAll(@Query() query: PaginationQueryDto) {
     return this.userService.findAllEmployees(query.limit, query.offset);
+  }
+
+  @Get('lookups/departments')
+  @ApiGetDepartmentLookupsOperation()
+  @ApiPaginationQueryParams()
+  @ApiQuery({ name: 'search', required: false, description: 'Search by code or name' })
+  getDepartmentLookups(@Query() query: PaginationQueryDto & { search?: string }) {
+    return this.userService.getDepartmentLookups(query);
+  }
+
+  @Get('lookups/designations')
+  @ApiGetDesignationLookupsOperation()
+  @ApiPaginationQueryParams()
+  @ApiQuery({ name: 'search', required: false, description: 'Search by code or name' })
+  getDesignationLookups(@Query() query: PaginationQueryDto & { search?: string }) {
+    return this.userService.getDesignationLookups(query);
+  }
+
+  @Get('lookups/organizations')
+  @ApiGetOrganizationLookupsOperation()
+  @ApiPaginationQueryParams()
+  @ApiQuery({ name: 'search', required: false, description: 'Search by code or name' })
+  getOrganizationLookups(@Query() query: PaginationQueryDto & { search?: string }) {
+    return this.userService.getOrganizationLookups(query);
+  }
+
+  @Get('lookups/citizenships')
+  @ApiGetCitizenshipLookupsOperation()
+  @ApiPaginationQueryParams()
+  @ApiQuery({ name: 'search', required: false, description: 'Search by code or name' })
+  getCitizenshipLookups(@Query() query: PaginationQueryDto & { search?: string }) {
+    return this.userService.getCitizenshipLookups(query);
   }
 
   @Get(':id')
