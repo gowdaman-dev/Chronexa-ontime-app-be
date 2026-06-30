@@ -1,8 +1,10 @@
 const { HolidaysService } = require('./holidays.service');
+const { WorkflowCommonService } = require('../shared/workflow-common.service');
 
 describe('HolidaysService', () => {
   let prisma: any;
   let service: any;
+  let common: any;
 
   beforeEach(() => {
     prisma = {
@@ -12,37 +14,8 @@ describe('HolidaysService', () => {
         create: jest.fn(),
       },
     };
-    const common = {
-      fail: jest.fn((statusCode: number, message: string) => {
-        const error: any = new Error(message);
-        error.getError = () => ({ statusCode, message });
-        throw error;
-      }),
-      toBoolean: jest.fn((value: any) =>
-        value === undefined || value === null || value === '' ? undefined : value === true || value === 'true',
-      ),
-      toNumber: jest.fn((value: any) =>
-        value === undefined || value === null || value === '' ? undefined : Number(value),
-      ),
-      parsePagination: jest.fn(() => ({ skip: 0, take: 10, limit: 10, offset: 1 })),
-      parseDate: jest.fn((value: any) => (value ? new Date(value) : undefined)),
-      parseDateRange: jest.fn((start?: string, end?: string) => ({
-        startDate: start ? new Date(start) : undefined,
-        endDate: end ? new Date(end) : undefined,
-      })),
-      dateFilter: jest.fn((start?: string, end?: string) => {
-        if (!start && !end) return undefined;
-        const filter: any = {};
-        if (start) filter.gte = new Date(start);
-        if (end) filter.lte = new Date(end);
-        return filter;
-      }),
-      mergeWhere: jest.fn((base: any, extra: any) => ({ ...base, ...extra })),
-      compact: jest.fn((value: any) =>
-        Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)),
-      ),
-    };
-    const logger = { info: jest.fn(), error: jest.fn() };
+    const logger = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+    common = new WorkflowCommonService(logger);
     service = new HolidaysService(prisma, common, logger);
   });
 
@@ -60,16 +33,34 @@ describe('HolidaysService', () => {
     });
   });
 
-  it('applies from_date/to_date overlap filter on /all', async () => {
+  it('applies from_date filter on holiday from_date when used alone', async () => {
     prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
+
+    await service.all({ query: { from_date: '2026-06-30', limit: 5, offset: 1 } });
+
+    expect(prisma.holidays.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          from_date: common.dateFilter('2026-06-30'),
+        },
+      }),
+    );
+  });
+
+  it('applies from_date/to_date overlap filter on /all when both are set', async () => {
+    prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
+    const { startDate: from, endDate: to } = common.parseDateRange(
+      '2025-06-01',
+      '2025-06-30',
+    );
 
     await service.all({ query: { from_date: '2025-06-01', to_date: '2025-06-30' } });
 
     expect(prisma.holidays.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.any(Array),
-        }),
+        where: {
+          AND: [{ to_date: { gte: from } }, { from_date: { lte: to } }],
+        },
       }),
     );
   });

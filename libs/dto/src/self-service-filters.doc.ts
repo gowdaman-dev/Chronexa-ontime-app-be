@@ -225,12 +225,12 @@ export function ApiHolidayFilters() {
     q('name', 'Alias for search', { example: 'national' }),
     q(
       'from_date',
-      'Holiday period overlap filter start (YYYY-MM-DD). Returns holidays where to_date >= from_date.',
+      'Filter holidays with from_date >= value (YYYY-MM-DD). With to_date, returns holidays whose period overlaps the range.',
       { example: '2025-01-01' },
     ),
     q(
       'to_date',
-      'Holiday period overlap filter end (YYYY-MM-DD). Returns holidays where from_date <= to_date.',
+      'Filter holidays with from_date <= value (YYYY-MM-DD). With from_date, returns holidays whose period overlaps the range.',
       { example: '2025-12-31' },
     ),
     q(
@@ -269,9 +269,12 @@ export function ApiReportFilters() {
   return applyDecorators(
     q(
       'limit',
-      'Page size. Omit to return all matching rows (recommended for PDF/HTML downloads).',
+      'Page size. Omit (or unlimited=true / limit=all) to return all matching rows (recommended for PDF/HTML downloads).',
       { type: 'number', example: 100 },
     ),
+    q('unlimited', 'Set to true to return all matching rows (same as omitting limit)', {
+      example: 'true',
+    }),
     q('offset', 'Page number (1-based). Only used when limit is set.', { type: 'number', example: 1 }),
     q(
       'from_date',

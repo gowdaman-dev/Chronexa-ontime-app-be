@@ -30,12 +30,6 @@ import { HolidaysController } from './holidays/holidays.controller';
 import { HolidaysService } from './holidays/holidays.service';
 import { EventTransactionsController } from './event-transactions/event-transactions.controller';
 import { EventTransactionsService } from './event-transactions/event-transactions.service';
-import { AttendanceController } from './attendance/attendance.controller';
-import { AttendanceService } from './attendance/attendance.service';
-import { ReportsController } from './reports/reports.controller';
-import { ReportsService } from './reports/reports.service';
-import { ReportQueryService } from './shared/report-query.service';
-import { ReportPdfService } from './shared/report-pdf.service';
 
 @Module({
   imports: [ConfigModule, PrismaModule, LoggingModule],
@@ -53,14 +47,10 @@ import { ReportPdfService } from './shared/report-pdf.service';
     PermissionTypesController,
     HolidaysController,
     EventTransactionsController,
-    AttendanceController,
-    ReportsController,
   ],
   providers: [
     SelfServiceService,
     WorkflowCommonService,
-    ReportQueryService,
-    ReportPdfService,
     MobileCommonService,
     LeavesService,
     ShortPermissionsService,
@@ -74,8 +64,6 @@ import { ReportPdfService } from './shared/report-pdf.service';
     PermissionTypesService,
     HolidaysService,
     EventTransactionsService,
-    AttendanceService,
-    ReportsService,
   ],
 })
 export class SelfServiceModule {}

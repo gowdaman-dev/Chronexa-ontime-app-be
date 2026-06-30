@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
-import { WorkflowCommonService } from './workflow-common.service';
+import { ReportCommonService } from './report-common.service';
 
 export type ReportRoleScope = {
   employeeId?: number;
@@ -11,7 +11,7 @@ export type ReportRoleScope = {
 export class ReportQueryService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly common: WorkflowCommonService,
+    private readonly common: ReportCommonService,
   ) {}
 
   buildSpWhere(query: Record<string, any> = {}, scope?: ReportRoleScope) {
@@ -115,10 +115,6 @@ export class ReportQueryService {
     return value ? String(value).slice(0, 10) : undefined;
   }
 
-  /**
-   * Old /report/attendance behaviour: each date filter is optional and independent.
-   * Never inject a default date range when the client omits date filters.
-   */
   resolveReportDateFilters(query: Record<string, any> = {}) {
     const range: { from_date?: string; to_date?: string; date?: string } = {};
     if (query.from_date) range.from_date = this.sliceDate(query.from_date);
@@ -127,7 +123,6 @@ export class ReportQueryService {
     return range;
   }
 
-  /** Response metadata only — mirrors query dates without inventing defaults. */
   reportDateMeta(
     query: Record<string, any> = {},
     merged: Record<string, any> = {},
@@ -146,10 +141,6 @@ export class ReportQueryService {
     };
   }
 
-  /**
-   * Period reports: expand only when `date` is provided.
-   * If from_date / to_date are sent, keep old independent filter behaviour (no period math).
-   */
   resolveDateRange(
     period: 'daily' | 'weekly' | 'monthly',
     query: Record<string, any> = {},
