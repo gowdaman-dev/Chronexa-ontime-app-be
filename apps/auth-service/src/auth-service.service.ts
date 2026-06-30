@@ -22,7 +22,8 @@ export class AuthServiceService {
     private readonly logger: AppLoggerService,
     private readonly appValidator: AppValidatorService,
   ) {
-    this.pepper = this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
+    this.pepper =
+      this.config.get<string>('accessTokenSecret') ?? 'default-pepper';
   }
 
   private sessionStorageKey(
@@ -38,7 +39,9 @@ export class AuthServiceService {
   private async getSessionCache(token: string) {
     const compactKey = CACHE_KEYS.AUTH_SESSION(this.sessionStorageKey(token));
     const legacyKey = CACHE_KEYS.AUTH_SESSION(token);
-    return (await this.cache.get(compactKey)) ?? (await this.cache.get(legacyKey));
+    return (
+      (await this.cache.get(compactKey)) ?? (await this.cache.get(legacyKey))
+    );
   }
 
   private async setSessionCache(token: string, verified: Record<string, any>) {
@@ -51,14 +54,18 @@ export class AuthServiceService {
   private async deleteSessionCache(token: string) {
     const decoded = this.jwtService.decode(token) as Record<string, any> | null;
     await this.cache.del(
-      CACHE_KEYS.AUTH_SESSION(this.sessionStorageKey(token, decoded ?? undefined)),
+      CACHE_KEYS.AUTH_SESSION(
+        this.sessionStorageKey(token, decoded ?? undefined),
+      ),
     );
     await this.cache.del(CACHE_KEYS.AUTH_SESSION(token));
   }
 
   hashPassword(password: string): string {
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt + this.pepper, 10000, 64, 'sha512').toString('hex');
+    const hash = crypto
+      .pbkdf2Sync(password, salt + this.pepper, 10000, 64, 'sha512')
+      .toString('hex');
     return `${salt}:${hash}`;
   }
 
@@ -90,7 +97,7 @@ export class AuthServiceService {
   private async getOrganizationByEmployeeId(employeeId: number) {
     try {
       const result: any = await this.prisma.$queryRaw`
-        SELECT o.organization_id, o.organization_eng AS organization_name
+        SELECT o.organization_id, o.organization_eng , o.entity_name , o.display_name AS organization_name
         FROM employee_master em
         LEFT JOIN organizations o ON em.organization_id = o.organization_id
         WHERE em.employee_id = ${employeeId}
@@ -99,6 +106,8 @@ export class AuthServiceService {
         return {
           organizationId: result[0].organization_id,
           organizationName: result[0].organization_name,
+          entityName: result[0].entity_name,
+          displayName: result[0].display_name,
         };
       }
     } catch (err) {
@@ -138,7 +147,10 @@ export class AuthServiceService {
         login,
         isMobileClient: mobileClient,
       });
-      throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid login or password',
+      });
     }
 
     if (!postmanClient) {
@@ -149,7 +161,8 @@ export class AuthServiceService {
         });
         throw new RpcException({
           statusCode: 403,
-          message: 'Access to mobile app is disabled. Please contact IT support.',
+          message:
+            'Access to mobile app is disabled. Please contact IT support.',
         });
       }
       if (mobileClient) {
@@ -162,7 +175,8 @@ export class AuthServiceService {
         });
         throw new RpcException({
           statusCode: 403,
-          message: 'Access to control panel is disabled. Please contact IT support.',
+          message:
+            'Access to control panel is disabled. Please contact IT support.',
         });
       }
     }
@@ -173,7 +187,10 @@ export class AuthServiceService {
         employeeId: user.employee_id,
         isMobileClient: mobileClient,
       });
-      throw new RpcException({ statusCode: 401, message: 'Invalid login or password' });
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Invalid login or password',
+      });
     }
 
     const emp = user.employee_master;
@@ -182,7 +199,10 @@ export class AuthServiceService {
         login,
         userId: user.user_id,
       });
-      throw new RpcException({ statusCode: 401, message: 'Employee record not found' });
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Employee record not found',
+      });
     }
 
     const role = this.getRole(emp.manager_flag);
@@ -241,6 +261,8 @@ export class AuthServiceService {
           firstarb: emp.firstname_arb,
           lastarb: emp.lastname_arb,
         },
+        costcode: emp.cost_code,
+        costcenter: emp.cost_center,
         role: role.toUpperCase(),
         employeeType,
         employeeNumber: emp.employee_id,
@@ -256,7 +278,9 @@ export class AuthServiceService {
 
   async adLogin(adToken: string, userAgent?: string) {
     this.logger.info('AD login attempt received', { userAgent });
-    const cacheKey = CACHE_KEYS.AD_TOKEN(crypto.createHash('sha256').update(adToken).digest('hex'));
+    const cacheKey = CACHE_KEYS.AD_TOKEN(
+      crypto.createHash('sha256').update(adToken).digest('hex'),
+    );
     let empNo = await this.cache.get<string>(cacheKey);
     if (!empNo) {
       empNo = await this.validateTokenWithGraphAPI(adToken);
@@ -288,7 +312,10 @@ export class AuthServiceService {
       this.logger.warn('AD login rejected: no linked user account', {
         employeeId: empRecord.employee_id,
       });
-      throw new RpcException({ statusCode: 401, message: 'No user account linked to this employee' });
+      throw new RpcException({
+        statusCode: 401,
+        message: 'No user account linked to this employee',
+      });
     }
 
     if (!postmanClient) {
@@ -298,7 +325,8 @@ export class AuthServiceService {
         });
         throw new RpcException({
           statusCode: 403,
-          message: 'Access to mobile app is disabled. Please contact IT support.',
+          message:
+            'Access to mobile app is disabled. Please contact IT support.',
         });
       }
       if (mobileClient) {
@@ -356,6 +384,8 @@ export class AuthServiceService {
           firstarb: empRecord.firstname_arb,
           lastarb: empRecord.lastname_arb,
         },
+        costcode: empRecord.cost_code,
+        costcenter: empRecord.cost_center,
         role: role.toUpperCase(),
         employeeType,
         employeeNumber: empRecord.employee_id,
@@ -377,7 +407,11 @@ export class AuthServiceService {
     try {
       const payload: any = this.jwtService.decode(refreshToken);
       if (payload?.jti) {
-        await this.cache.set(CACHE_KEYS.AUTH_BLACKLIST(payload.jti), true, CACHE_TTL.BLACKLIST);
+        await this.cache.set(
+          CACHE_KEYS.AUTH_BLACKLIST(payload.jti),
+          true,
+          CACHE_TTL.BLACKLIST,
+        );
       }
     } catch {}
 
@@ -390,7 +424,9 @@ export class AuthServiceService {
     try {
       const payload: any = this.jwtService.decode(token);
       if (payload?.jti) {
-        const blacklisted = await this.cache.exists(CACHE_KEYS.AUTH_BLACKLIST(payload.jti));
+        const blacklisted = await this.cache.exists(
+          CACHE_KEYS.AUTH_BLACKLIST(payload.jti),
+        );
         if (blacklisted) return null;
       }
 
@@ -433,7 +469,9 @@ export class AuthServiceService {
     }
   }
 
-  private async validateTokenWithGraphAPI(token: string): Promise<string | null> {
+  private async validateTokenWithGraphAPI(
+    token: string,
+  ): Promise<string | null> {
     try {
       const { data, status } = await axios.get(
         'https://graph.microsoft.com/v1.0/me?$select=employeeId',
