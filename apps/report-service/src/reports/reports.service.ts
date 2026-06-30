@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService } from '@app/common';
-import { WorkflowCommonService } from '../shared/workflow-common.service';
+import { ReportCommonService } from '../shared/report-common.service';
 import { ReportQueryService } from '../shared/report-query.service';
 import { ReportPdfService } from '../shared/report-pdf.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
-    private readonly common: WorkflowCommonService,
+    private readonly common: ReportCommonService,
     private readonly reportQuery: ReportQueryService,
     private readonly reportPdf: ReportPdfService,
     private readonly logger: AppLoggerService,
@@ -46,6 +46,9 @@ export class ReportsService {
       const range = this.reportQuery.resolveDateRange(period, baseQuery);
       const format = String(baseQuery.format ?? 'json').toLowerCase();
       const query = { ...baseQuery, ...range };
+      if (range.from_date || range.to_date) {
+        delete query.date;
+      }
       const dateMeta = this.reportQuery.reportDateMeta(baseQuery, range);
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);

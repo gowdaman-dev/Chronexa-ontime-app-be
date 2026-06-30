@@ -80,6 +80,84 @@ export function ApiDepartmentIdProperty(options?: ApiPropertyOptions) {
   );
 }
 
+export function ApiDepartmentEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Information Technology', description: 'Department name in English', ...options }),
+  );
+}
+
+export function ApiDepartmentArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'تقنية المعلومات', description: 'Department name in Arabic', ...options }),
+  );
+}
+
+export function ApiOrganizationEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Aldar HQ', description: 'Organization name in English', ...options }),
+  );
+}
+
+export function ApiOrganizationArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الدار', description: 'Organization name in Arabic', ...options }),
+  );
+}
+
+export function ApiVerticalIdProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 2, description: 'Parent vertical organization ID', ...options }),
+  );
+}
+
+export function ApiVerticalEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Real Estate', description: 'Vertical (parent organization) name in English', ...options }),
+  );
+}
+
+export function ApiVerticalArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'العقارات', description: 'Vertical (parent organization) name in Arabic', ...options }),
+  );
+}
+
+export function ApiDesignationEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'Software Engineer', description: 'Designation/job title in English', ...options }),
+  );
+}
+
+export function ApiDesignationArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'مهندس برمجيات', description: 'Designation/job title in Arabic', ...options }),
+  );
+}
+
+export function ApiCitizenshipEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'United Arab Emirates', description: 'Nationality/citizenship in English', ...options }),
+  );
+}
+
+export function ApiCitizenshipArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الإمارات العربية المتحدة', description: 'Nationality/citizenship in Arabic', ...options }),
+  );
+}
+
+export function ApiNationalityEngProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'United Arab Emirates', description: 'Nationality name in English (alias of citizenshipEng)', ...options }),
+  );
+}
+
+export function ApiNationalityArbProperty(options?: ApiPropertyOptions) {
+  return applyDecorators(
+    ApiProperty({ example: 'الإمارات العربية المتحدة', description: 'Nationality name in Arabic (alias of citizenshipArb)', ...options }),
+  );
+}
+
 export function ApiManagerIdProperty(options?: ApiPropertyOptions) {
   return applyDecorators(
     ApiProperty({ example: 10, description: 'Manager employee ID', ...options }),
@@ -416,5 +494,69 @@ export function ApiDeleteEmployeeOperation() {
     ApiParam({ name: 'id', type: Number, description: 'Employee ID', example: 100 }),
     ApiResponse({ status: 204, description: 'Employee deleted successfully' }),
     ApiResponse({ status: 404, description: 'Employee not found' }),
+  );
+}
+
+function apiLookupListResponse(description: string) {
+  return ApiResponse({
+    status: 200,
+    description,
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: { type: 'array', items: { type: 'object' } },
+        total: { type: 'number', example: 10 },
+        hasNext: { type: 'boolean', example: false },
+      },
+    },
+  });
+}
+
+export function ApiGetDepartmentLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List department lookups',
+      description: 'Paginated department list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated department lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetDesignationLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List designation lookups',
+      description: 'Paginated designation list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated designation lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetOrganizationLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List organization lookups',
+      description: 'Paginated organization list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated organization lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetCitizenshipLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List citizenship lookups',
+      description: 'Paginated citizenship/nationality list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated citizenship lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
   );
 }

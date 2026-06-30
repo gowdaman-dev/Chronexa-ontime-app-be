@@ -4,13 +4,13 @@ import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '@app/auth';
 import { ApiReportOperation } from '@app/dto/self-service.doc';
 import { ApiReportFilters } from '@app/dto/self-service-filters.doc';
-import { SelfServiceGatewayService } from '../self-service.service';
-import { renderSelfServiceReport } from '../self-service.helpers';
+import { ReportGatewayService } from '../report-gateway.service';
+import { renderReport } from '../report.helpers';
 
 @ApiTags('Reports')
 @Controller({ version: '1' })
 export class ReportsController {
-  constructor(private readonly selfService: SelfServiceGatewayService) {}
+  constructor(private readonly reports: ReportGatewayService) {}
 
   @Get('report/attendance')
   @ApiReportOperation(
@@ -22,13 +22,7 @@ export class ReportsController {
     @Query() query: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return renderSelfServiceReport(
-      this.selfService,
-      'self_service.reports.attendance',
-      user,
-      query,
-      res,
-    );
+    return renderReport(this.reports, 'report.attendance', user, query, res);
   }
 
   @Get('report/daily')
@@ -38,13 +32,7 @@ export class ReportsController {
     @Query() query: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return renderSelfServiceReport(
-      this.selfService,
-      'self_service.reports.daily',
-      user,
-      query,
-      res,
-    );
+    return renderReport(this.reports, 'report.daily', user, query, res);
   }
 
   @Get('report/weekly')
@@ -54,13 +42,7 @@ export class ReportsController {
     @Query() query: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return renderSelfServiceReport(
-      this.selfService,
-      'self_service.reports.weekly',
-      user,
-      query,
-      res,
-    );
+    return renderReport(this.reports, 'report.weekly', user, query, res);
   }
 
   @Get('report/monthly')
@@ -70,12 +52,6 @@ export class ReportsController {
     @Query() query: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return renderSelfServiceReport(
-      this.selfService,
-      'self_service.reports.monthly',
-      user,
-      query,
-      res,
-    );
+    return renderReport(this.reports, 'report.monthly', user, query, res);
   }
 }

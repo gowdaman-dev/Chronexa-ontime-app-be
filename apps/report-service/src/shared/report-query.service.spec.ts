@@ -54,6 +54,34 @@ describe('ReportQueryService pagination', () => {
     expect(sql).toContain('OFFSET');
     expect(sql).toContain('FETCH NEXT');
   });
+
+  it('omits OFFSET/FETCH when unlimited=true is sent with date range', async () => {
+    common.parseReportPagination.mockReturnValue({
+      unlimited: true,
+      offset: 1,
+      skip: 0,
+      take: 0,
+    });
+
+    const where = service.buildSpWhere({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+    });
+    expect(where).toContain("CAST(WorkDate AS DATE) >= CAST('2026-06-22' AS DATE)");
+    expect(where).toContain("CAST(WorkDate AS DATE) <= CAST('2026-06-28' AS DATE)");
+
+    await service.querySpEmployeeDailyReport({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+      unlimited: 'true',
+    });
+
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    const sql = Array.isArray(sqlArg?.strings)
+      ? sqlArg.strings.join('')
+      : String(sqlArg);
+    expect(sql).not.toContain('OFFSET');
+  });
 });
 
 describe('ReportQueryService date filters (old /report/attendance behaviour)', () => {
@@ -97,15 +125,15 @@ describe('ReportQueryService date filters (old /report/attendance behaviour)', (
       to_date: '2026-06-30',
     });
 
-    expect(where).toContain("WorkDate >= '2026-06-01'");
-    expect(where).toContain("WorkDate <= '2026-06-30'");
+    expect(where).toContain("CAST(WorkDate AS DATE) >= CAST('2026-06-01' AS DATE)");
+    expect(where).toContain("CAST(WorkDate AS DATE) <= CAST('2026-06-30' AS DATE)");
   });
 
   it('applies only from_date when to_date is omitted', async () => {
     const where = service.buildSpWhere({ from_date: '2026-06-01' });
 
-    expect(where).toContain("WorkDate >= '2026-06-01'");
-    expect(where).not.toContain('WorkDate <=');
+    expect(where).toContain("CAST(WorkDate AS DATE) >= CAST('2026-06-01' AS DATE)");
+    expect(where).not.toContain('CAST(WorkDate AS DATE) <=');
   });
 
   it('resolveDateRange returns empty object when no date filters are sent', () => {
@@ -131,5 +159,50 @@ describe('ReportQueryService date filters (old /report/attendance behaviour)', (
       from_date: '2026-06-17',
       to_date: '2026-06-23',
     });
+  });
+
+  it('maps isabsent=true to Absent/WeekOff string values', () => {
+    const where = service.buildSpWhere({ isabsent: 'true' });
+    expect(where).toContain("IsAbsent IN ('Absent', 'WeekOff')");
+  });
+
+  it('maps isabsent=false to present employees', () => {
+    const where = service.buildSpWhere({ isabsent: 'false' });
+    expect(where).toContain("IsAbsent NOT IN ('Absent', 'WeekOff')");
+  });
+
+  it('applies organization and employee type filters together', () => {
+    common.parseNumberArray.mockImplementation((value: unknown) => {
+      const n = Number(value);
+      return n === 26 ? [26] : [];
+    });
+    const where = service.buildSpWhere({
+      organization_id: 25,
+      employee_type_ids: 26,
+    });
+    expect(where).toContain('OrganizationID = 25');
+    expect(where).toContain('EmployeeTypeID IN (26)');
+  });
+
+  it('applies department and employee_ids filters', () => {
+    common.parseNumberArray.mockImplementation((value: unknown) => {
+      if (String(value).includes('74026')) return [74026, 7755, 7760];
+      return [];
+    });
+    const where = service.buildSpWhere({
+      department_id: 524,
+      employee_ids: '74026,7755,7760',
+    });
+    expect(where).toContain('DepartmentID = 524');
+    expect(where).toContain('EmployeeID IN (74026,7755,7760)');
+  });
+
+  it('accepts cost_code and cost_center aliases', () => {
+    const where = service.buildSpWhere({
+      cost_code: 'IT-OPS',
+      cost_center: 'CC-IT-001',
+    });
+    expect(where).toContain("CostCode = 'IT-OPS'");
+    expect(where).toContain("CostCenter = 'CC-IT-001'");
   });
 });

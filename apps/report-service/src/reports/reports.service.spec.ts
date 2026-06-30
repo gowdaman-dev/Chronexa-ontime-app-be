@@ -84,6 +84,64 @@ describe('ReportsService', () => {
     });
   });
 
+  it('weekly passes from_date and to_date without expanding the week', async () => {
+    reportQuery.resolveDateRange.mockImplementation(
+      (period: string, query: Record<string, any>) => {
+        if (query.from_date || query.to_date) {
+          return {
+            ...(query.from_date ? { from_date: String(query.from_date).slice(0, 10) } : {}),
+            ...(query.to_date ? { to_date: String(query.to_date).slice(0, 10) } : {}),
+          };
+        }
+        return {};
+      },
+    );
+
+    await service.weekly({
+      user: { employeeId: 100, role: 'Admin' },
+      query: {
+        from_date: '2026-06-22',
+        to_date: '2026-06-28',
+        unlimited: 'true',
+      },
+    });
+
+    expect(reportQuery.resolveDateRange).toHaveBeenCalledWith('weekly', {
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+      unlimited: 'true',
+    });
+    const [query] = reportQuery.querySpEmployeeDailyReport.mock.calls.at(-1);
+    expect(query).toEqual(
+      expect.objectContaining({
+        from_date: '2026-06-22',
+        to_date: '2026-06-28',
+      }),
+    );
+  });
+
+  it('strips date from query after weekly range expansion', async () => {
+    reportQuery.resolveDateRange.mockReturnValue({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+    });
+
+    await service.weekly({
+      user: { employeeId: 100, role: 'Admin' },
+      query: { date: '2026-06-28', unlimited: 'true' },
+    });
+
+    const [query] = reportQuery.querySpEmployeeDailyReport.mock.calls.at(-1);
+    expect(query).toEqual(
+      expect.objectContaining({
+        from_date: '2026-06-22',
+        to_date: '2026-06-28',
+        unlimited: 'true',
+      }),
+    );
+    expect(query.date).toBeUndefined();
+  });
+
   it('does not inject a default limit for pdf export', async () => {
     await service.daily({
       user: { employeeId: 100, role: 'Admin' },

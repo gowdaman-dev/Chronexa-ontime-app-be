@@ -12,7 +12,6 @@ import { LeaveTypesController } from './controllers/leave-types.controller';
 import { PermissionTypesController } from './controllers/permission-types.controller';
 import { HolidaysController } from './controllers/holidays.controller';
 import { EventTransactionsController } from './controllers/event-transactions.controller';
-import { ReportsController } from './controllers/reports.controller';
 
 @Module({
   imports: [
@@ -40,7 +39,6 @@ import { ReportsController } from './controllers/reports.controller';
     PermissionTypesController,
     HolidaysController,
     EventTransactionsController,
-    ReportsController,
   ],
   providers: [SelfServiceGatewayService],
   exports: [SelfServiceGatewayService],

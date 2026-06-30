@@ -30,6 +30,12 @@ export class UserServiceService {
     return `${salt}:${hash}`;
   }
 
+  private normalizePagination(limit?: unknown, offset?: unknown, defaultLimit = 20) {
+    const take = Math.max(1, Number(limit) || defaultLimit);
+    const skip = Math.max(0, Number(offset) || 0);
+    return { take, skip };
+  }
+
   private mapUserResponse(user: any) {
     const { password, ...rest } = user;
     return {
@@ -50,7 +56,125 @@ export class UserServiceService {
     };
   }
 
-  private mapEmployeeResponse(emp: any) {
+  private readonly employeeInclude = {
+    departments: {
+      select: {
+        department_id: true,
+        department_code: true,
+        department_name_eng: true,
+        department_name_arb: true,
+      },
+    },
+  };
+
+  private uniqueIds(values: Array<number | null | undefined>) {
+    return [...new Set(values.filter((value): value is number => Number.isFinite(value)))];
+  }
+
+  private async loadEmployeeLookupMaps(emps: Array<Record<string, any>>) {
+    const orgIds = this.uniqueIds(emps.map((emp) => emp.organization_id));
+    const designationIds = this.uniqueIds(emps.map((emp) => emp.designation_id));
+    const citizenshipIds = this.uniqueIds(emps.map((emp) => emp.citizenship_id));
+
+    const [organizations, designations, citizenships] = await Promise.all([
+      orgIds.length
+        ? this.prisma.organizations.findMany({
+            where: { organization_id: { in: orgIds } },
+            select: {
+              organization_id: true,
+              organization_code: true,
+              organization_eng: true,
+              organization_arb: true,
+              parent_id: true,
+            },
+          })
+        : [],
+      designationIds.length
+        ? this.prisma.designations.findMany({
+            where: { designation_id: { in: designationIds } },
+            select: {
+              designation_id: true,
+              designation_code: true,
+              designation_eng: true,
+              designation_arb: true,
+            },
+          })
+        : [],
+      citizenshipIds.length
+        ? this.prisma.citizenship.findMany({
+            where: { citizenship_id: { in: citizenshipIds } },
+            select: {
+              citizenship_id: true,
+              citizenship_code: true,
+              citizenship_eng: true,
+              citizenship_arb: true,
+            },
+          })
+        : [],
+    ]);
+
+    const parentIds = this.uniqueIds(organizations.map((org) => org.parent_id));
+    const parentOrganizations = parentIds.length
+      ? await this.prisma.organizations.findMany({
+          where: { organization_id: { in: parentIds } },
+          select: {
+            organization_id: true,
+            organization_eng: true,
+            organization_arb: true,
+          },
+        })
+      : [];
+
+    return {
+      organizations: new Map(
+        organizations.map(
+          (org) => [org.organization_id, org] as [number, (typeof organizations)[number]],
+        ),
+      ),
+      parentOrganizations: new Map(
+        parentOrganizations.map(
+          (org) => [org.organization_id, org] as [number, (typeof parentOrganizations)[number]],
+        ),
+      ),
+      designations: new Map(
+        designations.map(
+          (designation) =>
+            [designation.designation_id, designation] as [
+              number,
+              (typeof designations)[number],
+            ],
+        ),
+      ),
+      citizenships: new Map(
+        citizenships.map(
+          (citizenship) =>
+            [citizenship.citizenship_id, citizenship] as [
+              number,
+              (typeof citizenships)[number],
+            ],
+        ),
+      ),
+    };
+  }
+
+  private mapEmployeeResponse(
+    emp: Record<string, any>,
+    lookups?: Awaited<ReturnType<UserServiceService['loadEmployeeLookupMaps']>>,
+  ) {
+    const organization = emp.organization_id
+      ? lookups?.organizations.get(emp.organization_id)
+      : undefined;
+    const vertical = organization?.parent_id
+      ? lookups?.parentOrganizations.get(organization.parent_id)
+      : undefined;
+    const designation = emp.designation_id
+      ? lookups?.designations.get(emp.designation_id)
+      : undefined;
+    const citizenship = emp.citizenship_id
+      ? lookups?.citizenships.get(emp.citizenship_id)
+      : undefined;
+    const department = emp.departments;
+
     return {
       employeeId: emp.employee_id,
       empNo: emp.emp_no,
@@ -60,12 +184,56 @@ export class UserServiceService {
       lastnameArb: emp.lastname_arb,
       email: emp.email ?? null,
       mobile: emp.mobile ?? null,
+      organizationId: emp.organization_id ?? null,
+      organizationEng: organization?.organization_eng ?? null,
+      organizationArb: organization?.organization_arb ?? null,
+      verticalId: vertical?.organization_id ?? null,
+      verticalEng: vertical?.organization_eng ?? null,
+      verticalArb: vertical?.organization_arb ?? null,
       departmentId: emp.department_id ?? null,
+      departmentEng: department?.department_name_eng ?? null,
+      departmentArb: department?.department_name_arb ?? null,
       designationId: emp.designation_id ?? null,
+      designationEng: designation?.designation_eng ?? null,
+      designationArb: designation?.designation_arb ?? null,
+      citizenshipId: emp.citizenship_id ?? null,
+      citizenshipEng: citizenship?.citizenship_eng ?? null,
+      citizenshipArb: citizenship?.citizenship_arb ?? null,
+      nationalityEng: citizenship?.citizenship_eng ?? null,
+      nationalityArb: citizenship?.citizenship_arb ?? null,
+      gender: emp.gender ?? null,
+      joinDate: emp.join_date ?? null,
       activeFlag: emp.active_flag ?? null,
       employeeStatus: emp.employee_status ?? null,
       createdDate: emp.created_date,
       lastUpdatedDate: emp.last_updated_date,
+    };
+  }
+
+  private async mapEmployeesResponse(emps: Array<Record<string, any>>) {
+    const lookups = await this.loadEmployeeLookupMaps(emps);
+    return emps.map((emp) => this.mapEmployeeResponse(emp, lookups));
+  }
+
+  private paginatedLookupResult<T>(
+    rows: T[],
+    total: number,
+    limit: number,
+    offset: number,
+  ) {
+    return {
+      success: true,
+      data: rows,
+      total,
+      hasNext: offset + limit < total,
+    };
+  }
+
+  private buildSearchWhere(search: string | undefined, fields: string[]) {
+    if (!search?.trim()) return {};
+    const term = search.trim();
+    return {
+      OR: fields.map((field) => ({ [field]: { contains: term } })),
     };
   }
 
@@ -99,7 +267,8 @@ export class UserServiceService {
 
   async getAllUsers(limit = 20, offset = 0) {
     return this.run('getAllUsers', async () => {
-      const cacheKey = CACHE_KEYS.USERS_LIST(limit, offset);
+      const { take, skip } = this.normalizePagination(limit, offset);
+      const cacheKey = CACHE_KEYS.USERS_LIST(take, skip);
     const cached = await this.cache.get<{
       success: boolean;
       data: any[];
@@ -112,8 +281,8 @@ export class UserServiceService {
 
     const [users, total] = await Promise.all([
       this.prisma.sec_users.findMany({
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: {
           employee_master: { select: { firstname_eng: true, lastname_eng: true, email: true } },
           sec_user_roles: { include: { sec_roles: { select: { role_name: true } } } },
@@ -127,7 +296,7 @@ export class UserServiceService {
       success: true,
       data,
       total,
-      hasNext: offset + limit < total,
+      hasNext: skip + take < total,
     };
     await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
 
@@ -198,15 +367,20 @@ export class UserServiceService {
 
   async getEmployeeById(id: number) {
     return this.run('getEmployeeById', async () => {
-      const emp = await this.prisma.employee_master.findUnique({ where: { employee_id: id } });
-    if (!emp) return null;
-    return this.mapEmployeeResponse(emp);
+      const emp = await this.prisma.employee_master.findUnique({
+        where: { employee_id: id },
+        include: this.employeeInclude,
+      });
+      if (!emp) return null;
+      const lookups = await this.loadEmployeeLookupMaps([emp]);
+      return this.mapEmployeeResponse(emp, lookups);
     });
   }
 
   async getAllEmployees(limit = 20, offset = 0) {
     return this.run('getAllEmployees', async () => {
-      const cacheKey = CACHE_KEYS.EMPLOYEES_LIST(limit, offset);
+      const { take, skip } = this.normalizePagination(limit, offset);
+      const cacheKey = CACHE_KEYS.EMPLOYEES_LIST(take, skip);
     const cached = await this.cache.get<{
       success: boolean;
       data: any[];
@@ -218,21 +392,158 @@ export class UserServiceService {
     }
 
     const [emps, total] = await Promise.all([
-      this.prisma.employee_master.findMany({ skip: offset, take: limit }),
+      this.prisma.employee_master.findMany({
+        skip,
+        take,
+        include: this.employeeInclude,
+      }),
       this.prisma.employee_master.count(),
     ]);
 
-    const data = emps.map((e) => this.mapEmployeeResponse(e));
+    const data = await this.mapEmployeesResponse(emps);
     const response = {
       success: true,
       data,
       total,
-      hasNext: offset + limit < total,
+      hasNext: skip + take < total,
     };
     await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
 
     return response;
     });
+  }
+
+  async getDepartmentLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
+    const where = this.buildSearchWhere(query.search, [
+      'department_code',
+      'department_name_eng',
+      'department_name_arb',
+    ]);
+    const [rows, total] = await Promise.all([
+      this.prisma.departments.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy: { department_name_eng: 'asc' },
+      }),
+      this.prisma.departments.count({ where }),
+    ]);
+    return this.paginatedLookupResult(
+      rows.map((row) => ({
+        departmentId: row.department_id,
+        departmentCode: row.department_code,
+        departmentEng: row.department_name_eng ?? null,
+        departmentArb: row.department_name_arb ?? null,
+      })),
+      total,
+      limit,
+      offset,
+    );
+  }
+
+  async getDesignationLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
+    const where = this.buildSearchWhere(query.search, [
+      'designation_code',
+      'designation_eng',
+      'designation_arb',
+    ]);
+    const [rows, total] = await Promise.all([
+      this.prisma.designations.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy: { designation_eng: 'asc' },
+      }),
+      this.prisma.designations.count({ where }),
+    ]);
+    return this.paginatedLookupResult(
+      rows.map((row) => ({
+        designationId: row.designation_id,
+        designationCode: row.designation_code,
+        designationEng: row.designation_eng ?? null,
+        designationArb: row.designation_arb ?? null,
+      })),
+      total,
+      limit,
+      offset,
+    );
+  }
+
+  async getOrganizationLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
+    const where = this.buildSearchWhere(query.search, [
+      'organization_code',
+      'organization_eng',
+      'organization_arb',
+    ]);
+    const [rows, total] = await Promise.all([
+      this.prisma.organizations.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy: { organization_eng: 'asc' },
+      }),
+      this.prisma.organizations.count({ where }),
+    ]);
+    return this.paginatedLookupResult(
+      rows.map((row) => ({
+        organizationId: row.organization_id,
+        organizationCode: row.organization_code,
+        organizationEng: row.organization_eng ?? null,
+        organizationArb: row.organization_arb ?? null,
+        parentOrganizationId: row.parent_id ?? null,
+      })),
+      total,
+      limit,
+      offset,
+    );
+  }
+
+  async getCitizenshipLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
+    const where = this.buildSearchWhere(query.search, [
+      'citizenship_code',
+      'citizenship_eng',
+      'citizenship_arb',
+    ]);
+    const [rows, total] = await Promise.all([
+      this.prisma.citizenship.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        orderBy: { citizenship_eng: 'asc' },
+      }),
+      this.prisma.citizenship.count({ where }),
+    ]);
+    return this.paginatedLookupResult(
+      rows.map((row) => ({
+        citizenshipId: row.citizenship_id,
+        citizenshipCode: row.citizenship_code,
+        citizenshipEng: row.citizenship_eng ?? null,
+        citizenshipArb: row.citizenship_arb ?? null,
+      })),
+      total,
+      limit,
+      offset,
+    );
   }
 
   async createEmployee(data: any) {
@@ -304,9 +615,13 @@ export class UserServiceService {
       }
     }
 
-    const emp = await (this.prisma.employee_master.create as any)({ data: createData });
+    const emp = await (this.prisma.employee_master.create as any)({
+      data: createData,
+      include: this.employeeInclude,
+    });
     await this.cache.delPattern('employees:list:*');
-    return this.mapEmployeeResponse(emp);
+    const lookups = await this.loadEmployeeLookupMaps([emp]);
+    return this.mapEmployeeResponse(emp, lookups);
     });
   }
 

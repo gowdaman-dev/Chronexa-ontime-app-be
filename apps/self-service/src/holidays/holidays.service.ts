@@ -25,15 +25,32 @@ export class HolidaysService {
   }
 
   private buildHolidayDateFilter(query: Record<string, any> = {}) {
+    const fromInput = query.from_date;
+    const toInput = query.to_date;
     const { startDate: from, endDate: to } = this.common.parseDateRange(
-      query.from_date,
-      query.to_date,
+      fromInput,
+      toInput,
     );
     if (!from && !to) return {};
-    const conditions: Record<string, any>[] = [];
-    if (from) conditions.push({ to_date: { gte: from } });
-    if (to) conditions.push({ from_date: { lte: to } });
-    return conditions.length === 1 ? conditions[0] : { AND: conditions };
+
+    // One date only: holidays active on that calendar day.
+    if (from && !to) {
+      const { endDate: dayEnd } = this.common.parseDateRange(fromInput, fromInput);
+      return {
+        AND: [{ to_date: { gte: from } }, { from_date: { lte: dayEnd } }],
+      };
+    }
+
+    // Both dates: holidays whose period overlaps the range.
+    if (from && to) {
+      return {
+        AND: [{ to_date: { gte: from } }, { from_date: { lte: to } }],
+      };
+    }
+
+    // to_date only: holidays that started on or before the given day.
+    const range = this.common.dateFilter(undefined, toInput);
+    return range ? { from_date: range } : {};
   }
 
   private whereFromQuery(query: Record<string, any> = {}) {

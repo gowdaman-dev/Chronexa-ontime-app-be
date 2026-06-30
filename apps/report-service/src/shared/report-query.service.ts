@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@app/prisma';
-import { WorkflowCommonService } from './workflow-common.service';
+import { ReportCommonService } from './report-common.service';
 
 export type ReportRoleScope = {
   employeeId?: number;
@@ -12,20 +12,51 @@ export type ReportRoleScope = {
 export class ReportQueryService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly common: WorkflowCommonService,
+    private readonly common: ReportCommonService,
   ) {}
+
+  private isAbsentFlag(value: unknown) {
+    return value === true || value === 'true' || value === '1';
+  }
+
+  private buildIsAbsentConditionSql(value: unknown): Prisma.Sql {
+    if (this.isAbsentFlag(value)) {
+      return Prisma.sql`IsAbsent IN ('Absent', 'WeekOff')`;
+    }
+    return Prisma.sql`(IsAbsent IS NULL OR IsAbsent = '' OR IsAbsent NOT IN ('Absent', 'WeekOff'))`;
+  }
+
+  private buildIsAbsentCondition(value: unknown): string {
+    if (this.isAbsentFlag(value)) {
+      return `IsAbsent IN ('Absent', 'WeekOff')`;
+    }
+    return `(IsAbsent IS NULL OR IsAbsent = '' OR IsAbsent NOT IN ('Absent', 'WeekOff'))`;
+  }
+
+  private resolveQueryString(query: Record<string, any>, ...keys: string[]) {
+    for (const key of keys) {
+      const value = query[key];
+      if (value !== undefined && value !== null && value !== '') {
+        return String(value);
+      }
+    }
+    return undefined;
+  }
 
   buildSpWhere(query: Record<string, any> = {}, scope?: ReportRoleScope) {
     const conditions: string[] = [`EmployeeStatus='Active'`];
 
     if (query.from_date) {
-      conditions.push(`WorkDate >= '${String(query.from_date).slice(0, 10)}'`);
+      const fromDate = String(query.from_date).slice(0, 10);
+      conditions.push(`CAST(WorkDate AS DATE) >= CAST('${fromDate}' AS DATE)`);
     }
     if (query.to_date) {
-      conditions.push(`WorkDate <= '${String(query.to_date).slice(0, 10)}'`);
+      const toDate = String(query.to_date).slice(0, 10);
+      conditions.push(`CAST(WorkDate AS DATE) <= CAST('${toDate}' AS DATE)`);
     }
     if (query.date) {
-      conditions.push(`WorkDate = '${String(query.date).slice(0, 10)}'`);
+      const date = String(query.date).slice(0, 10);
+      conditions.push(`CAST(WorkDate AS DATE) = CAST('${date}' AS DATE)`);
     }
 
     const employeeIds = this.common.parseNumberArray(
@@ -66,17 +97,19 @@ export class ReportQueryService {
     }
 
     if (query.isabsent !== undefined) {
-      const val =
-        query.isabsent === true ||
-        query.isabsent === 'true' ||
-        query.isabsent === '1'
-          ? '1'
-          : '0';
-      conditions.push(`IsAbsent = '${val}'`);
+      conditions.push(this.buildIsAbsentCondition(query.isabsent));
     }
 
-    if (query.costcode) conditions.push(`CostCode = '${query.costcode}'`);
-    if (query.costcenter) conditions.push(`CostCenter = '${query.costcenter}'`);
+    const costCode = this.resolveQueryString(query, 'costcode', 'cost_code', 'costCode');
+    if (costCode) conditions.push(`CostCode = '${costCode}'`);
+
+    const costCenter = this.resolveQueryString(
+      query,
+      'costcenter',
+      'cost_center',
+      'costCenter',
+    );
+    if (costCenter) conditions.push(`CostCenter = '${costCenter}'`);
 
     return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   }
@@ -88,17 +121,20 @@ export class ReportQueryService {
     const conditions: Prisma.Sql[] = [Prisma.sql`EmployeeStatus='Active'`];
 
     if (query.from_date) {
+      const fromDate = String(query.from_date).slice(0, 10);
       conditions.push(
-        Prisma.sql`WorkDate >= ${String(query.from_date).slice(0, 10)}`,
+        Prisma.sql`CAST(WorkDate AS DATE) >= CAST(${fromDate} AS DATE)`,
       );
     }
     if (query.to_date) {
+      const toDate = String(query.to_date).slice(0, 10);
       conditions.push(
-        Prisma.sql`WorkDate <= ${String(query.to_date).slice(0, 10)}`,
+        Prisma.sql`CAST(WorkDate AS DATE) <= CAST(${toDate} AS DATE)`,
       );
     }
     if (query.date) {
-      conditions.push(Prisma.sql`WorkDate = ${String(query.date).slice(0, 10)}`);
+      const date = String(query.date).slice(0, 10);
+      conditions.push(Prisma.sql`CAST(WorkDate AS DATE) = CAST(${date} AS DATE)`);
     }
 
     const employeeIds = this.common.parseNumberArray(
@@ -151,20 +187,22 @@ export class ReportQueryService {
     }
 
     if (query.isabsent !== undefined) {
-      const val =
-        query.isabsent === true ||
-        query.isabsent === 'true' ||
-        query.isabsent === '1'
-          ? '1'
-          : '0';
-      conditions.push(Prisma.sql`IsAbsent = ${val}`);
+      conditions.push(this.buildIsAbsentConditionSql(query.isabsent));
     }
 
-    if (query.costcode) {
-      conditions.push(Prisma.sql`CostCode = ${String(query.costcode)}`);
+    const costCode = this.resolveQueryString(query, 'costcode', 'cost_code', 'costCode');
+    if (costCode) {
+      conditions.push(Prisma.sql`CostCode = ${costCode}`);
     }
-    if (query.costcenter) {
-      conditions.push(Prisma.sql`CostCenter = ${String(query.costcenter)}`);
+
+    const costCenter = this.resolveQueryString(
+      query,
+      'costcenter',
+      'cost_center',
+      'costCenter',
+    );
+    if (costCenter) {
+      conditions.push(Prisma.sql`CostCenter = ${costCenter}`);
     }
 
     return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
@@ -205,10 +243,6 @@ export class ReportQueryService {
     return value ? String(value).slice(0, 10) : undefined;
   }
 
-  /**
-   * Old /report/attendance behaviour: each date filter is optional and independent.
-   * Never inject a default date range when the client omits date filters.
-   */
   resolveReportDateFilters(query: Record<string, any> = {}) {
     const range: { from_date?: string; to_date?: string; date?: string } = {};
     if (query.from_date) range.from_date = this.sliceDate(query.from_date);
@@ -217,7 +251,6 @@ export class ReportQueryService {
     return range;
   }
 
-  /** Response metadata only — mirrors query dates without inventing defaults. */
   reportDateMeta(
     query: Record<string, any> = {},
     merged: Record<string, any> = {},
@@ -236,10 +269,13 @@ export class ReportQueryService {
     };
   }
 
-  /**
-   * Period reports: expand only when `date` is provided.
-   * If from_date / to_date are sent, keep old independent filter behaviour (no period math).
-   */
+  private formatLocalDate(value: Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   resolveDateRange(
     period: 'daily' | 'weekly' | 'monthly',
     query: Record<string, any> = {},
@@ -263,8 +299,8 @@ export class ReportQueryService {
     }
 
     return {
-      from_date: start.toISOString().slice(0, 10),
-      to_date: end.toISOString().slice(0, 10),
+      from_date: this.formatLocalDate(start),
+      to_date: this.formatLocalDate(end),
     };
   }
 

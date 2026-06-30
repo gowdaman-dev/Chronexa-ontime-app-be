@@ -6,22 +6,22 @@ import { ReportsService } from './reports.service';
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
-  @MessagePattern('self_service.reports.daily')
+  @MessagePattern('report.daily')
   daily(@Payload() data: any) {
     return this.reports.daily(data);
   }
 
-  @MessagePattern('self_service.reports.weekly')
+  @MessagePattern('report.weekly')
   weekly(@Payload() data: any) {
     return this.reports.weekly(data);
   }
 
-  @MessagePattern('self_service.reports.monthly')
+  @MessagePattern('report.monthly')
   monthly(@Payload() data: any) {
     return this.reports.monthly(data);
   }
 
-  @MessagePattern('self_service.reports.attendance')
+  @MessagePattern('report.attendance')
   attendance(@Payload() data: any) {
     return this.reports.attendance(data);
   }

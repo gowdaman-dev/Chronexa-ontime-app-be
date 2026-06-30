@@ -225,12 +225,12 @@ export function ApiHolidayFilters() {
     q('name', 'Alias for search', { example: 'national' }),
     q(
       'from_date',
-      'Holiday period overlap filter start (YYYY-MM-DD). Returns holidays where to_date >= from_date.',
+      'Filter holidays active on this calendar day (YYYY-MM-DD). With to_date, returns holidays whose period overlaps the range.',
       { example: '2025-01-01' },
     ),
     q(
       'to_date',
-      'Holiday period overlap filter end (YYYY-MM-DD). Returns holidays where from_date <= to_date.',
+      'Filter holidays with from_date <= value (YYYY-MM-DD). With from_date, returns holidays whose period overlaps the range.',
       { example: '2025-12-31' },
     ),
     q(
@@ -269,9 +269,12 @@ export function ApiReportFilters() {
   return applyDecorators(
     q(
       'limit',
-      'Page size. Omit to return all matching rows (recommended for PDF/HTML downloads).',
+      'Page size. Omit (or unlimited=true / limit=all) to return all matching rows (recommended for PDF/HTML downloads).',
       { type: 'number', example: 100 },
     ),
+    q('unlimited', 'Set to true to return all matching rows (same as omitting limit)', {
+      example: 'true',
+    }),
     q('offset', 'Page number (1-based). Only used when limit is set.', { type: 'number', example: 1 }),
     q(
       'from_date',
@@ -301,9 +304,15 @@ export function ApiReportFilters() {
     q('managerId', 'Alias for manager_id', { type: 'number', example: 900 }),
     q('employee_type_ids', 'Comma-separated employee type IDs', { example: '1,26' }),
     q('employeeTypeIds', 'Alias for employee_type_ids', { example: '1,26' }),
-    q('isabsent', 'Absent filter: true | false', { example: 'false' }),
+    q('isabsent', 'Absent filter: true = Absent/WeekOff rows; false = present employees', {
+      example: 'false',
+    }),
     q('costcode', 'Cost code filter', { example: 'CC01' }),
+    q('cost_code', 'Alias for costcode', { example: 'CC01' }),
+    q('costCode', 'Alias for costcode', { example: 'CC01' }),
     q('costcenter', 'Cost center filter', { example: 'CENTER01' }),
+    q('cost_center', 'Alias for costcenter', { example: 'CENTER01' }),
+    q('costCenter', 'Alias for costcenter', { example: 'CENTER01' }),
     q(
       'format',
       'Response format: json | html | pdf. PDF/HTML include all rows when limit is omitted; pass limit to paginate.',
