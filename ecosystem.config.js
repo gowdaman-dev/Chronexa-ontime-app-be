@@ -30,5 +30,11 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
     },
+    {
+      name: 'report-service',
+      script: 'dist/apps/report-service/main.js',
+      instances: 1,
+      exec_mode: 'fork',
+    },
   ],
 };
