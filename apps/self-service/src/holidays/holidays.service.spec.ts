@@ -60,16 +60,45 @@ describe('HolidaysService', () => {
     });
   });
 
-  it('applies from_date filter on holiday from_date when used alone', async () => {
+  it('applies single-day overlap when only from_date is set', async () => {
     prisma.holidays.findMany.mockResolvedValue([{ holiday_id: 1 }]);
     prisma.holidays.count.mockResolvedValue(1);
+
+    const { startDate: from, endDate: to } = common.parseDateRange(
+      '2026-06-30',
+      '2026-06-30',
+    );
 
     await service.all({ query: { from_date: '2026-06-30', limit: 5, offset: 1 } });
 
     expect(prisma.holidays.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        skip: 0,
+        take: 5,
         where: {
-          from_date: common.dateFilter('2026-06-30'),
+          AND: [{ to_date: { gte: from } }, { from_date: { lte: to } }],
+        },
+      }),
+    );
+  });
+
+  it('includes multi-day holidays that span the from_date day', async () => {
+    prisma.holidays.findMany.mockResolvedValue([
+      { holiday_id: 10, from_date: new Date('2026-06-28'), to_date: new Date('2026-07-02') },
+    ]);
+    prisma.holidays.count.mockResolvedValue(1);
+
+    const { startDate: from, endDate: to } = common.parseDateRange(
+      '2026-06-30',
+      '2026-06-30',
+    );
+
+    await service.all({ query: { from_date: '2026-06-30' } });
+
+    expect(prisma.holidays.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [{ to_date: { gte: from } }, { from_date: { lte: to } }],
         },
       }),
     );

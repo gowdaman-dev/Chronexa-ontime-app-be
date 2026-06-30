@@ -46,6 +46,9 @@ export class ReportsService {
       const range = this.reportQuery.resolveDateRange(period, baseQuery);
       const format = String(baseQuery.format ?? 'json').toLowerCase();
       const query = { ...baseQuery, ...range };
+      if (range.from_date || range.to_date) {
+        delete query.date;
+      }
       const dateMeta = this.reportQuery.reportDateMeta(baseQuery, range);
       const scope = this.roleScope(payload.user, query);
       const result = await this.reportQuery.querySpEmployeeDailyReport(query, scope);
