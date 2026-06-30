@@ -22,7 +22,7 @@ import {
 import {
   ApiEventTransactionFilters,
   ApiTodayStatusFilters,
-  ApiPaginationFilters,
+  ApiPunchStatusFilters,
 } from '@app/dto/self-service-filters.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { toUserPayload } from '../self-service.helpers';
@@ -130,7 +130,10 @@ export class EventTransactionsController {
   }
 
   @Get('employeeEventTransaction/mylasttransaction/:id')
-  @ApiSelfServiceOperation('My last event transaction', ApiSelfServiceIdParam())
+  @ApiSelfServiceOperation(
+    'My last event transaction',
+    ApiSelfServiceIdParam('id', 'Employee ID'),
+  )
   myLastEventTransactions(@Param('id') id: string) {
     return this.selfService.workflow('self_service.event_transactions.my_last', { id: +id });
   }
@@ -144,7 +147,7 @@ export class EventTransactionsController {
   }
 
   @Get('employeeEventTransaction/punchStatus')
-  @ApiSelfServiceOperation('Current punch status', ApiPaginationFilters())
+  @ApiSelfServiceOperation('Current punch status', ApiPunchStatusFilters())
   getPunchStatus(@CurrentUser() user: AuthUser, @Query() query: any) {
     return this.selfService.workflow('self_service.event_transactions.punch_status', {
       user: toUserPayload(user),

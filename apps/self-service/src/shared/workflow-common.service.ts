@@ -1,22 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
-import { AppLoggerService } from '@app/common';
+import { AppLoggerService, microserviceFail } from '@app/common';
 
 @Injectable()
 export class WorkflowCommonService {
   constructor(private readonly logger: AppLoggerService) {}
 
   fail(statusCode: number, message: string, extra?: Record<string, any>): never {
-    const meta = { statusCode, ...extra };
-    if (statusCode >= 500) {
-      this.logger.error('Self-service workflow error', { message, ...meta });
-    } else {
-      this.logger.warn('Self-service workflow request rejected', {
-        message,
-        ...meta,
-      });
-    }
-    throw new RpcException({ statusCode, message, ...extra });
+    microserviceFail(
+      this.logger,
+      statusCode,
+      message,
+      extra,
+      statusCode >= 500
+        ? 'Self-service workflow error'
+        : 'Self-service workflow request rejected',
+    );
   }
 
   toNumber(value: any): number | undefined {

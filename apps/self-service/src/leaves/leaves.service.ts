@@ -57,6 +57,27 @@ export class LeavesService {
   private employeeRelationKey =
     'employee_master_employee_leaves_employee_idToemployee_master';
 
+  private leaveApproverRelationKey =
+    'employee_master_employee_leaves_approver_idToemployee_master';
+
+  private mapLeaveRow(row: any) {
+    if (!row || typeof row !== 'object') return row;
+    const mapped = { ...row };
+    const employee =
+      mapped[this.employeeRelationKey] ?? mapped.employee_master;
+    if (employee) {
+      mapped.employee_master = employee;
+      delete mapped[this.employeeRelationKey];
+    }
+    const approver =
+      mapped[this.leaveApproverRelationKey] ?? mapped.approver_master;
+    if (approver) {
+      mapped.approver_master = approver;
+    }
+    delete mapped[this.leaveApproverRelationKey];
+    return mapped;
+  }
+
   private async assertEmployeeOrgAccess(
     employeeId: number,
     user?: { role?: string },
@@ -86,7 +107,7 @@ export class LeavesService {
   ) {
     const mode = options?.mode ?? 'all';
     let where: any = {};
-    const employeeId = this.common.toNumber(query.employee_id);
+    const employeeId = this.common.resolveEmployeeId(query);
     const leaveTypeId = this.common.toNumber(query.leave_type_id);
     const managerId = this.common.toNumber(query.manager_id);
     const organizationId = this.common.toNumber(query.organization_id);
@@ -238,7 +259,13 @@ export class LeavesService {
       }),
       this.prisma.employee_leaves.count({ where }),
     ]);
-    return { success: true, data, total, hasNext: skip + data.length < total };
+    const mapped = data.map((row) => this.mapLeaveRow(row));
+    return {
+      success: true,
+      data: mapped,
+      total,
+      hasNext: skip + mapped.length < total,
+    };
   }
 
   async add(payload: { user: any; body: any; file?: any }) {

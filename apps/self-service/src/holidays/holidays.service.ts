@@ -24,6 +24,18 @@ export class HolidaysService {
     }
   }
 
+  private buildHolidayDateFilter(query: Record<string, any> = {}) {
+    const { startDate: from, endDate: to } = this.common.parseDateRange(
+      query.from_date,
+      query.to_date,
+    );
+    if (!from && !to) return {};
+    const conditions: Record<string, any>[] = [];
+    if (from) conditions.push({ to_date: { gte: from } });
+    if (to) conditions.push({ from_date: { lte: to } });
+    return conditions.length === 1 ? conditions[0] : { AND: conditions };
+  }
+
   private whereFromQuery(query: Record<string, any> = {}) {
     const where: any = {};
     if (query.search || query.name) {
@@ -39,9 +51,31 @@ export class HolidaysService {
     if (this.common.toBoolean(query.public_holiday_flag) !== undefined) {
       where.public_holiday_flag = this.common.toBoolean(query.public_holiday_flag);
     }
+    const dateFilter = this.buildHolidayDateFilter(query);
+    if (Object.keys(dateFilter).length) {
+      return this.common.mergeWhere(where, dateFilter);
+    }
     return where;
   }
 
+  private buildYearMonthWhere(year?: number, month?: number) {
+    if (!year) return {};
+    if (year && month) {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 1);
+      return { from_date: { gte: start, lt: end } };
+    }
+    const start = new Date(year, 0, 1);
+    const end = new Date(year + 1, 0, 1);
+    return { from_date: { gte: start, lt: end } };
+  }
+
+  private buildListWhere(query: Record<string, any> = {}, year?: number, month?: number) {
+    const base = this.whereFromQuery(query);
+    const yearMonth = this.buildYearMonthWhere(year, month);
+    if (!Object.keys(yearMonth).length) return base;
+    return this.common.mergeWhere(base, yearMonth);
+  }
   private filterHolidaysByYearMonth(
     rows: any[],
     year?: number,
@@ -73,14 +107,23 @@ export class HolidaysService {
       const { skip, take } = this.common.parsePagination(query);
       const year = this.common.toNumber(query.year);
       const month = this.common.toNumber(query.month);
-      const rows = await this.prisma.holidays.findMany({
-        where: this.whereFromQuery(query),
-        orderBy: { from_date: 'asc' },
-      });
+      const where = this.buildListWhere(query, year, month);
+      const [rows, total] = await Promise.all([
+        this.prisma.holidays.findMany({
+          where,
+          orderBy: { from_date: 'asc' },
+          skip,
+          take,
+        }),
+        this.prisma.holidays.count({ where }),
+      ]);
       const filtered = this.filterHolidaysByYearMonth(rows, year, month);
-      const data = filtered.slice(skip, skip + take);
-      const total = filtered.length;
-      return { success: true, data, total, hasNext: skip + data.length < total };
+      return {
+        success: true,
+        data: filtered,
+        total,
+        hasNext: skip + filtered.length < total,
+      };
     });
   }
 
@@ -96,15 +139,60 @@ export class HolidaysService {
 
   async upcoming(payload: { query?: any }) {
     return this.run('upcoming', async () => {
-      const days = this.common.toNumber(payload.query?.days) ?? 30;
-      const now = new Date();
-      const end = new Date();
+      const query = payload.query ?? {};
+      const { skip, take } = this.common.parsePagination(query);
+
+      if (query.from_date || query.to_date) {
+        const where: any = {};
+        const range = this.common.dateFilter(query.from_date, query.to_date);
+        if (range) where.from_date = range;
+        const [rows, total] = await Promise.all([
+          this.prisma.holidays.findMany({
+            where,
+            orderBy: { from_date: 'asc' },
+            skip,
+            take,
+          }),
+          this.prisma.holidays.count({ where }),
+        ]);
+        return {
+          success: true,
+          data: rows,
+          total,
+          hasNext: skip + rows.length < total,
+        };
+      }
+
+      const days = this.common.toNumber(query.days) ?? 30;
+      if (days < 1) this.common.fail(400, 'Invalid days parameter. Must be a positive number.');
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(today);
       end.setDate(end.getDate() + days);
-      const data = await this.prisma.holidays.findMany({
-        where: { from_date: { gte: now, lte: end } },
-        orderBy: { from_date: 'asc' },
-      });
-      return { success: true, data, total: data.length };
+      end.setHours(23, 59, 59, 999);
+
+      const [rows, total] = await Promise.all([
+        this.prisma.holidays.findMany({
+          where: {
+            from_date: { gte: today, lte: end },
+          },
+          orderBy: { from_date: 'asc' },
+          skip,
+          take,
+        }),
+        this.prisma.holidays.count({
+          where: {
+            from_date: { gte: today, lte: end },
+          },
+        }),
+      ]);
+      return {
+        success: true,
+        data: rows,
+        total,
+        hasNext: skip + rows.length < total,
+      };
     });
   }
 

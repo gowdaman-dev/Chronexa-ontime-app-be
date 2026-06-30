@@ -69,8 +69,118 @@ export class ShortPermissionsService {
     return this.common.parseDate(`${datePart}T${normalizedTime}.000Z`);
   }
 
+  private mapShortPermissionRow(row: any) {
+    if (!row || typeof row !== 'object') return row;
+    const mapped = { ...row };
+    const employee =
+      mapped[this.permissionEmployeeRelationKey] ?? mapped.employee_master;
+    if (employee) {
+      mapped.employee_master = employee;
+      delete mapped[this.permissionEmployeeRelationKey];
+    }
+    const approver =
+      mapped[this.permissionApproverRelationKey] ?? mapped.approver_master;
+    if (approver) {
+      mapped.approver_master = approver;
+    }
+    delete mapped[this.permissionApproverRelationKey];
+    return mapped;
+  }
+
+  private whereFromTeamQuery(query: Record<string, any> = {}, managerId: number) {
+    const where: any = {
+      [this.permissionEmployeeRelationKey]: { manager_id: managerId },
+    };
+    const employeeId = this.common.resolveEmployeeId(query);
+    if (employeeId) where.employee_id = employeeId;
+
+    if (
+      query.pending === true ||
+      query.pending === 'true' ||
+      query.pending === '1'
+    ) {
+      where.approve_reject_flag = 0;
+    }
+
+    const status =
+      this.common.toNumber(query.status) ??
+      this.common.toNumber(query.approve_reject_flag);
+    if (status !== undefined) where.approve_reject_flag = status;
+
+    if (query.from_date || query.to_date) {
+      if (query.from_date) {
+        where.to_date = { gte: new Date(`${query.from_date}T00:00:00.000Z`) };
+      }
+      if (query.to_date) {
+        where.from_date = { lte: new Date(`${query.to_date}T23:59:59.999Z`) };
+      }
+    }
+
+    const search = query.search ? String(query.search) : undefined;
+    if (search) {
+      return this.common.mergeWhere(where, {
+        OR: [
+          {
+            permission_types: {
+              is: {
+                OR: [
+                  { permission_type_eng: { contains: search } },
+                  { permission_type_arb: { contains: search } },
+                ],
+              },
+            },
+          },
+          {
+            [this.permissionEmployeeRelationKey]: {
+              OR: [
+                { emp_no: { contains: search } },
+                { firstname_eng: { contains: search } },
+                { lastname_eng: { contains: search } },
+                { firstname_arb: { contains: search } },
+                { lastname_arb: { contains: search } },
+              ],
+            },
+          },
+        ],
+      });
+    }
+
+    return where;
+  }
+
   private permissionEmployeeRelationKey =
     'employee_master_employee_short_permissions_employee_idToemployee_master';
+
+  private permissionApproverRelationKey =
+    'employee_master_employee_short_permissions_approver_idToemployee_master';
+
+  private async listShortPermissions(
+    query: Record<string, any>,
+    options?: {
+      mode?: 'list' | 'team';
+      managerId?: number;
+      user?: { role?: string };
+      allowedOrgIds?: number[];
+    },
+  ) {
+    const { skip, take } = this.common.parsePagination(query);
+    const where =
+      options?.mode === 'team' && options.managerId
+        ? this.whereFromTeamQuery(query, options.managerId)
+        : this.whereFromQuery(query, options?.user, options?.allowedOrgIds);
+    const [rows, total] = await Promise.all([
+      this.prisma.employee_short_permissions.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { short_permission_id: 'desc' },
+        include: this.include(),
+      }),
+      this.prisma.employee_short_permissions.count({ where }),
+    ]);
+    const data = rows.map((row) => this.mapShortPermissionRow(row));
+    return { success: true, data, total, hasNext: skip + data.length < total };
+  }
 
   private whereFromSearch(
     query: Record<string, any> = {},
@@ -120,7 +230,9 @@ export class ShortPermissionsService {
     allowedOrgIds?: number[],
   ) {
     const where: any = {};
-    const employeeId = this.common.toNumber(query.employee_id);
+    const employeeId =
+      this.common.resolveEmployeeId(query) ??
+      this.common.toNumber(query.employee_id);
     const managerId = this.common.toNumber(query.manager_id);
     const status =
       this.common.toNumber(query.status) ??
@@ -221,25 +333,12 @@ export class ShortPermissionsService {
   }
 
   async all(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
-    return this.run('all', async () => {
-      const { skip, take } = this.common.parsePagination(payload.query);
-      const where = this.whereFromQuery(
-        payload.query,
-        payload.user,
-        payload.allowedOrgIds,
-      );
-      const [data, total] = await Promise.all([
-        this.prisma.employee_short_permissions.findMany({
-          where,
-          skip,
-          take,
-          orderBy: { short_permission_id: 'desc' },
-          include: this.include(),
-        }),
-        this.prisma.employee_short_permissions.count({ where }),
-      ]);
-      return { success: true, data, total, hasNext: skip + data.length < total };
-    });
+    return this.run('all', async () =>
+      this.listShortPermissions(payload.query ?? {}, {
+        user: payload.user,
+        allowedOrgIds: payload.allowedOrgIds,
+      }),
+    );
   }
 
   pending(payload: { query: any; user?: any; allowedOrgIds?: number[] }) {
@@ -258,7 +357,7 @@ export class ShortPermissionsService {
         payload.user,
         payload.allowedOrgIds,
       );
-      const [data, total] = await Promise.all([
+      const [rows, total] = await Promise.all([
         this.prisma.employee_short_permissions.findMany({
           where,
           skip,
@@ -268,6 +367,7 @@ export class ShortPermissionsService {
         }),
         this.prisma.employee_short_permissions.count({ where }),
       ]);
+      const data = rows.map((row) => this.mapShortPermissionRow(row));
       return { success: true, data, total, hasNext: skip + data.length < total };
     });
   }
@@ -280,7 +380,7 @@ export class ShortPermissionsService {
         include: this.include(),
       });
       if (!data) this.common.fail(404, 'Employee short permission not found');
-      return { success: true, data };
+      return { success: true, data: this.mapShortPermissionRow(data) };
     });
   }
 
@@ -291,14 +391,14 @@ export class ShortPermissionsService {
   }
 
   teamAll(payload: { user: any; query: any; allowedOrgIds?: number[] }) {
-    return this.all({
-      query: {
-        ...(payload.query ?? {}),
-        manager_id: Number(payload.user?.employeeId),
-      },
-      user: payload.user,
-      allowedOrgIds: payload.allowedOrgIds,
-    });
+    return this.run('teamAll', async () =>
+      this.listShortPermissions(payload.query ?? {}, {
+        mode: 'team',
+        managerId: Number(payload.user?.employeeId),
+        user: payload.user,
+        allowedOrgIds: payload.allowedOrgIds,
+      }),
+    );
   }
 
   async approve(payload: { id: number; body: any; user: any }) {

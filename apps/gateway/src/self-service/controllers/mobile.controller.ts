@@ -24,6 +24,7 @@ import {
 } from '@app/dto/self-service.doc';
 import { SelfServiceGatewayService } from '../self-service.service';
 import { serializeUploadFile } from '../self-service.helpers';
+import { getMulterUploadOptions } from '../../uploads/multer.options';
 
 @ApiTags('Mobile')
 @Controller({ version: '1' })
@@ -70,7 +71,7 @@ export class MobileSelfServiceController {
   }
 
   @Post('ids-punch/punch')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image', getMulterUploadOptions()))
   @ApiIdsPunchOperation()
   punch(
     @CurrentUser() user: AuthUser,
@@ -88,7 +89,7 @@ export class MobileSelfServiceController {
   }
 
   @Post('ids-punch/verify-encounter')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image', getMulterUploadOptions()))
   @ApiIdsVerifyEncounterOperation()
   verifyEncounter(
     @CurrentUser() user: AuthUser,

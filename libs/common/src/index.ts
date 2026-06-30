@@ -5,3 +5,5 @@ export * from './services/audit.service';
 export * from './services/app-logger.service';
 export * from './modules/audit.module';
 export * from './modules/logging.module';
+export * from './utils/rpc-client.util';
+export * from './utils/microservice-error.util';

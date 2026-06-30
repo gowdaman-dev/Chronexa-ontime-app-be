@@ -46,7 +46,7 @@ export class ManualTransactionsService {
 
   private whereFromQuery(query: Record<string, any> = {}) {
     const where: any = {};
-    const employeeId = this.common.toNumber(query.employee_id);
+    const employeeId = this.common.resolveEmployeeId(query);
     if (employeeId) where.employee_id = employeeId;
     if (query.status) where.transaction_status = query.status;
     const dateFilter = this.common.dateFilter(query.from_date, query.to_date);
@@ -219,6 +219,56 @@ export class ManualTransactionsService {
     });
   }
 
+  private async whereFromTeamQuery(
+    query: Record<string, any> = {},
+    teamMemberIds: number[],
+  ) {
+    let employeeIds = teamMemberIds;
+    const employeeId = this.common.resolveEmployeeId(query);
+    if (employeeId) {
+      employeeIds = teamMemberIds.includes(employeeId) ? [employeeId] : [];
+    }
+
+    if (!employeeIds.length) {
+      return { employee_id: -1 };
+    }
+
+    const where: any = { employee_id: { in: employeeIds } };
+    const status = query.status ?? query.pending;
+    if (status) where.transaction_status = String(status);
+
+    const dateFilter = this.common.dateFilter(query.from_date, query.to_date);
+    if (dateFilter) where.transaction_time = dateFilter;
+
+    const search = query.search ? String(query.search).trim() : '';
+    if (search) {
+      const matched = await this.prisma.employee_master.findMany({
+        where: {
+          AND: [
+            { employee_id: { in: employeeIds } },
+            {
+              OR: [
+                { firstname_eng: { contains: search } },
+                { lastname_eng: { contains: search } },
+                { firstname_arb: { contains: search } },
+                { lastname_arb: { contains: search } },
+                { emp_no: { contains: search } },
+              ],
+            },
+          ],
+        },
+        select: { employee_id: true },
+      });
+      const matchedIds = matched.map((row) => row.employee_id);
+      if (!matchedIds.length) {
+        return { employee_id: -1 };
+      }
+      where.employee_id = { in: matchedIds };
+    }
+
+    return where;
+  }
+
   async teamAll(payload: { user: any; query: any }) {
     return this.run('teamAll', async () => {
       const managerId = Number(payload.user?.employeeId);
@@ -231,10 +281,7 @@ export class ManualTransactionsService {
         return { success: true, data: [], hasNext: false, total: 0 };
       }
       const { skip, take } = this.common.parsePagination(payload.query);
-      const where = {
-        ...this.whereFromQuery(payload.query),
-        employee_id: { in: ids },
-      };
+      const where = await this.whereFromTeamQuery(payload.query ?? {}, ids);
       const [rows, total] = await Promise.all([
         this.prisma.employee_manual_transactions.findMany({
           where,
@@ -261,42 +308,45 @@ export class ManualTransactionsService {
       if (existing.transaction_status === 'Approved') {
         this.common.fail(400, 'Transaction is already approved');
       }
-      const updated = await this.prisma.employee_manual_transactions.update({
-        where: { employee_manual_transaction_id: id },
-        data: { transaction_status: 'Approved', last_updated_id: requesterId },
-      });
-      const event = await this.prisma.employee_event_transactions.create({
-        data: {
-          employee_id: updated.employee_id,
-          transaction_time: updated.transaction_time,
-          reason: updated.reason,
-          remarks: 'Approved manual transaction',
-          user_entry_flag: true,
-          created_id: requesterId,
-          last_updated_id: requesterId,
-          last_updated_date: new Date(),
-        },
-      });
-      if (updated.emp_missing_movement_id) {
-        await this.prisma.emp_missing_movements.update({
-          where: { emp_missing_Movements_Id: updated.emp_missing_movement_id },
-          data:
-            updated.reason === 'IN'
-              ? {
-                  Reason_IN: 'IN',
-                  trans_IN_id: event.transaction_id,
-                  Trans_IN: event.transaction_time,
-                  Status_IN: 'Approved',
-                }
-              : {
-                  Reason_OUT: 'OUT',
-                  trans_OUT_id: event.transaction_id,
-                  Trans_OUT: event.transaction_time,
-                  Status_OUT: 'Approved',
-                },
+      const result = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.employee_manual_transactions.update({
+          where: { employee_manual_transaction_id: id },
+          data: { transaction_status: 'Approved', last_updated_id: requesterId },
         });
-      }
-      return { message: 'Transaction approved successfully', data: updated };
+        const event = await tx.employee_event_transactions.create({
+          data: {
+            employee_id: updated.employee_id,
+            transaction_time: updated.transaction_time,
+            reason: updated.reason,
+            remarks: 'Approved manual transaction',
+            user_entry_flag: true,
+            created_id: requesterId,
+            last_updated_id: requesterId,
+            last_updated_date: new Date(),
+          },
+        });
+        if (updated.emp_missing_movement_id) {
+          await tx.emp_missing_movements.update({
+            where: { emp_missing_Movements_Id: updated.emp_missing_movement_id },
+            data:
+              updated.reason === 'IN'
+                ? {
+                    Reason_IN: 'IN',
+                    trans_IN_id: event.transaction_id,
+                    Trans_IN: event.transaction_time,
+                    Status_IN: 'Approved',
+                  }
+                : {
+                    Reason_OUT: 'OUT',
+                    trans_OUT_id: event.transaction_id,
+                    Trans_OUT: event.transaction_time,
+                    Status_OUT: 'Approved',
+                  },
+          });
+        }
+        return updated;
+      });
+      return { message: 'Transaction approved successfully', data: result };
     });
   }
 
@@ -311,19 +361,22 @@ export class ManualTransactionsService {
       if (existing.transaction_status === 'Approved') {
         this.common.fail(400, 'Transaction is already approved');
       }
-      const updated = await this.prisma.employee_manual_transactions.update({
-        where: { employee_manual_transaction_id: id },
-        data: { transaction_status: 'Rejected' },
-      });
-      if (updated.emp_missing_movement_id) {
-        await this.prisma.emp_missing_movements.update({
-          where: { emp_missing_Movements_Id: updated.emp_missing_movement_id },
-          data:
-            updated.reason === 'IN'
-              ? { Status_IN: 'Rejected' }
-              : { Status_OUT: 'Rejected' },
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const row = await tx.employee_manual_transactions.update({
+          where: { employee_manual_transaction_id: id },
+          data: { transaction_status: 'Rejected' },
         });
-      }
+        if (row.emp_missing_movement_id) {
+          await tx.emp_missing_movements.update({
+            where: { emp_missing_Movements_Id: row.emp_missing_movement_id },
+            data:
+              row.reason === 'IN'
+                ? { Status_IN: 'Rejected' }
+                : { Status_OUT: 'Rejected' },
+          });
+        }
+        return row;
+      });
       return { message: 'Transaction rejected successfully', data: updated };
     });
   }
@@ -352,20 +405,20 @@ export class ManualTransactionsService {
               select: { employee_id: true },
             })
           ).map((employee) => employee.employee_id);
-      for (const employeeId of targetIds) {
-        await this.prisma.employee_event_transactions.create({
-          data: {
-            employee_id: employeeId,
-            transaction_time: transactionTime,
-            reason,
-            remarks: body.remarks ?? body.remark ?? '',
-            user_entry_flag: true,
-            created_id: requesterId,
-            last_updated_id: requesterId,
-            last_updated_date: new Date(),
-          },
-        });
-      }
+      const remarks = body.remarks ?? body.remark ?? '';
+      const lastUpdatedDate = new Date();
+      await this.prisma.employee_event_transactions.createMany({
+        data: targetIds.map((employeeId) => ({
+          employee_id: employeeId,
+          transaction_time: transactionTime,
+          reason,
+          remarks,
+          user_entry_flag: true,
+          created_id: requesterId,
+          last_updated_id: requesterId,
+          last_updated_date: lastUpdatedDate,
+        })),
+      });
       return {
         message: `Group transaction approved successfully for ${targetIds.length} employees.`,
         numberOfEmployees: targetIds.length,
@@ -391,8 +444,13 @@ export class ManualTransactionsService {
       );
       const reason = String(body.reason ?? body.Reason ?? '').toUpperCase();
       const created: any[] = [];
-      const createOne = async (employeeId: number, time: Date, txReason: 'IN' | 'OUT') => {
-        const row = await this.prisma.employee_manual_transactions.create({
+      const createOne = async (
+        tx: any,
+        employeeId: number,
+        time: Date,
+        txReason: 'IN' | 'OUT',
+      ) => {
+        const row = await tx.employee_manual_transactions.create({
           data: {
             employee_id: employeeId,
             transaction_time: time,
@@ -409,37 +467,39 @@ export class ManualTransactionsService {
       if (!employeeIds.length) {
         this.common.fail(400, "Provide 'employeeIds' or 'employee_ids'.");
       }
-      if (reason === 'BOTH') {
-        const timeIn = this.common.parseDate(
-          body.transaction_time_in ?? body.transactionTimeIn,
-        );
-        const timeOut = this.common.parseDate(
-          body.transaction_time_out ?? body.transactionTimeOut,
-        );
-        if (!timeIn || !timeOut) {
-          this.common.fail(
-            400,
-            "Invalid input, 'transaction_time_in' and 'transaction_time_out' are required when reason is 'BOTH'.",
+      await this.prisma.$transaction(async (tx) => {
+        if (reason === 'BOTH') {
+          const timeIn = this.common.parseDate(
+            body.transaction_time_in ?? body.transactionTimeIn,
           );
-        }
-        for (const employeeId of employeeIds) {
-          await createOne(employeeId, timeIn, 'IN');
-          await createOne(employeeId, timeOut, 'OUT');
-        }
-      } else {
-        const transactionTime = this.common.parseDate(
-          body.transaction_time ?? body.transactionTime,
-        );
-        if (!transactionTime || (reason !== 'IN' && reason !== 'OUT')) {
-          this.common.fail(
-            400,
-            "Invalid input, 'transaction_time' and reason IN/OUT are required.",
+          const timeOut = this.common.parseDate(
+            body.transaction_time_out ?? body.transactionTimeOut,
           );
+          if (!timeIn || !timeOut) {
+            this.common.fail(
+              400,
+              "Invalid input, 'transaction_time_in' and 'transaction_time_out' are required when reason is 'BOTH'.",
+            );
+          }
+          for (const employeeId of employeeIds) {
+            await createOne(tx, employeeId, timeIn, 'IN');
+            await createOne(tx, employeeId, timeOut, 'OUT');
+          }
+        } else {
+          const transactionTime = this.common.parseDate(
+            body.transaction_time ?? body.transactionTime,
+          );
+          if (!transactionTime || (reason !== 'IN' && reason !== 'OUT')) {
+            this.common.fail(
+              400,
+              "Invalid input, 'transaction_time' and reason IN/OUT are required.",
+            );
+          }
+          for (const employeeId of employeeIds) {
+            await createOne(tx, employeeId, transactionTime, reason as 'IN' | 'OUT');
+          }
         }
-        for (const employeeId of employeeIds) {
-          await createOne(employeeId, transactionTime, reason as 'IN' | 'OUT');
-        }
-      }
+      });
       return {
         message: `Manual transactions created successfully for ${created.length} entries.`,
         numberOfTransactions: created.length,

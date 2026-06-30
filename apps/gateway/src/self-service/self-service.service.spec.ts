@@ -10,7 +10,11 @@ describe('SelfServiceGatewayService routing', () => {
   beforeEach(() => {
     selfClient = { send: jest.fn().mockReturnValue(of({ ok: true })) };
     logger = { warn: jest.fn(), error: jest.fn() };
-    service = new SelfServiceGatewayService(selfClient, logger);
+    service = new SelfServiceGatewayService(
+      selfClient,
+      { get: () => 30_000 },
+      logger,
+    );
   });
 
   it('routes listed mobile APIs to self-service using stable mobile patterns', async () => {

@@ -6,12 +6,15 @@ import {
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
-import { RpcExceptionFilter } from './common/filters/rpc-exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import compression from 'compression';
 import helmet from 'helmet';
+import express from 'express';
 import { AppLoggerService } from '@app/common';
+import { getUploadsRoot } from './uploads/uploads.paths';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
@@ -51,6 +54,7 @@ async function bootstrap() {
     .addTag('Holidays', 'Holiday calendar')
     .addTag('Event Transactions', 'Punch and event transactions')
     .addTag('Reports', 'Daily, weekly, and monthly attendance reports')
+    .addTag('User Manual', 'Download the mobile app user manual')
     .addSecurity('bearerAuth', {
       type: 'http',
       scheme: 'bearer',
@@ -69,6 +73,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
+  app.use('/uploads', express.static(getUploadsRoot()));
   app.use(compression());
   app.use(
     helmet({
@@ -87,7 +92,7 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
   const appLogger = app.get(AppLoggerService);
-  app.useGlobalFilters(new RpcExceptionFilter(appLogger));
+  app.useGlobalFilters(new AllExceptionsFilter(appLogger));
 
   app.use(
     '/docs',

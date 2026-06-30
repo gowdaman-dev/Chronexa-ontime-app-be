@@ -44,10 +44,82 @@ export class EventTransactionsService {
     }
   }
 
-  private async whereFromQuery(query: Record<string, any> = {}, managerId?: number) {
+  private applyEmployeeIdScope(where: Record<string, any>, ids: number[]) {
+    if (!ids.length) {
+      where.employee_id = -1;
+      return;
+    }
+    const current = where.employee_id;
+    if (current === undefined) {
+      where.employee_id = { in: ids };
+      return;
+    }
+    if (typeof current === 'number') {
+      where.employee_id = ids.includes(current) ? current : -1;
+      return;
+    }
+    if (Array.isArray(current?.in)) {
+      const intersection = current.in.filter((id: number) => ids.includes(id));
+      where.employee_id = intersection.length ? { in: intersection } : -1;
+    }
+  }
+
+  private async applySearchFilter(
+    where: Record<string, any>,
+    search: string,
+    scopeEmployeeIds?: number[],
+  ) {
+    const term = String(search).trim();
+    if (!term) return;
+
+    const upper = term.toUpperCase();
+    if (upper === 'IN' || upper === 'OUT') {
+      where.reason = upper;
+      return;
+    }
+
+    const employeeWhere: Record<string, any> = {
+      OR: [
+        { firstname_eng: { contains: term } },
+        { lastname_eng: { contains: term } },
+        { firstname_arb: { contains: term } },
+        { lastname_arb: { contains: term } },
+        { emp_no: { contains: term } },
+      ],
+    };
+    if (scopeEmployeeIds?.length) {
+      employeeWhere.employee_id = { in: scopeEmployeeIds };
+    }
+
+    const matched = await this.prisma.employee_master.findMany({
+      where: employeeWhere,
+      select: { employee_id: true },
+      take: 500,
+    });
+    this.applyEmployeeIdScope(
+      where,
+      matched.map((employee) => employee.employee_id),
+    );
+  }
+
+  private async whereFromQuery(
+    query: Record<string, any> = {},
+    managerId?: number,
+    teamEmployeeIds?: number[],
+  ) {
     const where: any = {};
     const employeeId = this.common.resolveEmployeeId(query);
-    if (employeeId) where.employee_id = employeeId;
+    if (teamEmployeeIds?.length) {
+      if (employeeId) {
+        where.employee_id = teamEmployeeIds.includes(employeeId)
+          ? employeeId
+          : -1;
+      } else {
+        where.employee_id = { in: teamEmployeeIds };
+      }
+    } else if (employeeId) {
+      where.employee_id = employeeId;
+    }
 
     const dateFilter = this.common.dateFilter(
       query.from_date ?? query.startDate,
@@ -57,20 +129,11 @@ export class EventTransactionsService {
 
     if (query.reason) where.reason = String(query.reason);
     if (query.search) {
-      const term = String(query.search);
-      where.OR = [
-        { reason: { contains: term } },
-        { remarks: { contains: term } },
-        {
-          employee_master: {
-            OR: [
-              { firstname_eng: { contains: term } },
-              { lastname_eng: { contains: term } },
-              { emp_no: { contains: term } },
-            ],
-          },
-        },
-      ];
+      await this.applySearchFilter(
+        where,
+        String(query.search),
+        teamEmployeeIds,
+      );
     }
 
     const organizationId = this.common.toNumber(query.organization_id);
@@ -78,15 +141,17 @@ export class EventTransactionsService {
     const employeeMasterFilter: any = {};
     if (organizationId) employeeMasterFilter.organization_id = organizationId;
     if (departmentId) employeeMasterFilter.department_id = departmentId;
-    if (managerId) employeeMasterFilter.manager_id = managerId;
-    else {
-      const parsedManagerId = this.common.toNumber(query.manager_id);
-      if (parsedManagerId) {
-        const team = await this.prisma.employee_master.findMany({
-          where: { manager_id: parsedManagerId },
-          select: { employee_id: true },
-        });
-        where.employee_id = { in: team.map((e) => e.employee_id) };
+    if (!teamEmployeeIds?.length) {
+      if (managerId) employeeMasterFilter.manager_id = managerId;
+      else {
+        const parsedManagerId = this.common.toNumber(query.manager_id);
+        if (parsedManagerId) {
+          const team = await this.prisma.employee_master.findMany({
+            where: { manager_id: parsedManagerId },
+            select: { employee_id: true },
+          });
+          where.employee_id = { in: team.map((e) => e.employee_id) };
+        }
       }
     }
     if (Object.keys(employeeMasterFilter).length) {
@@ -232,9 +297,21 @@ export class EventTransactionsService {
   async teamAll(payload: { user: any; query: any }) {
     const managerId = Number(payload.user?.employeeId);
     if (!managerId) this.common.fail(400, 'manager_id is required');
+    const teamMembers = await this.prisma.employee_master.findMany({
+      where: { manager_id: managerId },
+      select: { employee_id: true },
+    });
+    const teamIds = teamMembers.map((employee) => employee.employee_id);
+    if (!teamIds.length) {
+      return { success: true, data: [], total: 0, hasNext: false };
+    }
     return this.run('teamAll', async () => {
       const { skip, take } = this.common.parsePagination(payload.query);
-      const where = await this.whereFromQuery(payload.query, managerId);
+      const where = await this.whereFromQuery(
+        payload.query,
+        undefined,
+        teamIds,
+      );
       const [data, total] = await Promise.all([
         this.prisma.employee_event_transactions.findMany({
           where,
