@@ -4,7 +4,13 @@ import {
   NotFoundException,
   Res,
 } from '@nestjs/common';
-import { ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { existsSync } from 'node:fs';
 import { Public } from '@app/auth';
@@ -19,10 +25,18 @@ export class ManualController {
     summary: 'Download user manual',
     description:
       'Downloads the Chronexa mobile app user manual as a PDF. No authentication required.',
+    operationId: 'downloadUserManual',
   })
   @ApiProduces('application/pdf')
-  @ApiResponse({ status: 200, description: 'PDF file download' })
-  @ApiResponse({ status: 404, description: 'Manual file not found' })
+  @ApiOkResponse({
+    description: 'PDF file download (chronexa-user-manual.pdf)',
+    content: {
+      'application/pdf': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Manual file not found on server' })
   download(@Res() res: Response) {
     const filePath = getManualPdfPath();
     if (!existsSync(filePath)) {

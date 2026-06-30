@@ -496,3 +496,67 @@ export function ApiDeleteEmployeeOperation() {
     ApiResponse({ status: 404, description: 'Employee not found' }),
   );
 }
+
+function apiLookupListResponse(description: string) {
+  return ApiResponse({
+    status: 200,
+    description,
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: { type: 'array', items: { type: 'object' } },
+        total: { type: 'number', example: 10 },
+        hasNext: { type: 'boolean', example: false },
+      },
+    },
+  });
+}
+
+export function ApiGetDepartmentLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List department lookups',
+      description: 'Paginated department list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated department lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetDesignationLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List designation lookups',
+      description: 'Paginated designation list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated designation lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetOrganizationLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List organization lookups',
+      description: 'Paginated organization list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated organization lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}
+
+export function ApiGetCitizenshipLookupsOperation() {
+  return applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: 'List citizenship lookups',
+      description: 'Paginated citizenship/nationality list for employee/report filters',
+    }),
+    apiLookupListResponse('Paginated citizenship lookups'),
+    ApiResponse({ status: 401, description: 'Unauthorized' }),
+  );
+}

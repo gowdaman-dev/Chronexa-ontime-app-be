@@ -225,7 +225,7 @@ export function ApiHolidayFilters() {
     q('name', 'Alias for search', { example: 'national' }),
     q(
       'from_date',
-      'Filter holidays with from_date >= value (YYYY-MM-DD). With to_date, returns holidays whose period overlaps the range.',
+      'Filter holidays active on this calendar day (YYYY-MM-DD). With to_date, returns holidays whose period overlaps the range.',
       { example: '2025-01-01' },
     ),
     q(
@@ -304,9 +304,15 @@ export function ApiReportFilters() {
     q('managerId', 'Alias for manager_id', { type: 'number', example: 900 }),
     q('employee_type_ids', 'Comma-separated employee type IDs', { example: '1,26' }),
     q('employeeTypeIds', 'Alias for employee_type_ids', { example: '1,26' }),
-    q('isabsent', 'Absent filter: true | false', { example: 'false' }),
+    q('isabsent', 'Absent filter: true = Absent/WeekOff rows; false = present employees', {
+      example: 'false',
+    }),
     q('costcode', 'Cost code filter', { example: 'CC01' }),
+    q('cost_code', 'Alias for costcode', { example: 'CC01' }),
+    q('costCode', 'Alias for costcode', { example: 'CC01' }),
     q('costcenter', 'Cost center filter', { example: 'CENTER01' }),
+    q('cost_center', 'Alias for costcenter', { example: 'CENTER01' }),
+    q('costCenter', 'Alias for costcenter', { example: 'CENTER01' }),
     q(
       'format',
       'Response format: json | html | pdf. PDF/HTML include all rows when limit is omitted; pass limit to paginate.',
