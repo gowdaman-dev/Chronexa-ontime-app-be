@@ -30,6 +30,12 @@ export class UserServiceService {
     return `${salt}:${hash}`;
   }
 
+  private normalizePagination(limit?: unknown, offset?: unknown, defaultLimit = 20) {
+    const take = Math.max(1, Number(limit) || defaultLimit);
+    const skip = Math.max(0, Number(offset) || 0);
+    return { take, skip };
+  }
+
   private mapUserResponse(user: any) {
     const { password, ...rest } = user;
     return {
@@ -261,7 +267,8 @@ export class UserServiceService {
 
   async getAllUsers(limit = 20, offset = 0) {
     return this.run('getAllUsers', async () => {
-      const cacheKey = CACHE_KEYS.USERS_LIST(limit, offset);
+      const { take, skip } = this.normalizePagination(limit, offset);
+      const cacheKey = CACHE_KEYS.USERS_LIST(take, skip);
     const cached = await this.cache.get<{
       success: boolean;
       data: any[];
@@ -274,8 +281,8 @@ export class UserServiceService {
 
     const [users, total] = await Promise.all([
       this.prisma.sec_users.findMany({
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: {
           employee_master: { select: { firstname_eng: true, lastname_eng: true, email: true } },
           sec_user_roles: { include: { sec_roles: { select: { role_name: true } } } },
@@ -289,7 +296,7 @@ export class UserServiceService {
       success: true,
       data,
       total,
-      hasNext: offset + limit < total,
+      hasNext: skip + take < total,
     };
     await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
 
@@ -372,7 +379,8 @@ export class UserServiceService {
 
   async getAllEmployees(limit = 20, offset = 0) {
     return this.run('getAllEmployees', async () => {
-      const cacheKey = CACHE_KEYS.EMPLOYEES_LIST(limit, offset);
+      const { take, skip } = this.normalizePagination(limit, offset);
+      const cacheKey = CACHE_KEYS.EMPLOYEES_LIST(take, skip);
     const cached = await this.cache.get<{
       success: boolean;
       data: any[];
@@ -385,8 +393,8 @@ export class UserServiceService {
 
     const [emps, total] = await Promise.all([
       this.prisma.employee_master.findMany({
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: this.employeeInclude,
       }),
       this.prisma.employee_master.count(),
@@ -397,7 +405,7 @@ export class UserServiceService {
       success: true,
       data,
       total,
-      hasNext: offset + limit < total,
+      hasNext: skip + take < total,
     };
     await this.cache.set(cacheKey, response, CACHE_TTL.LIST);
 
@@ -406,8 +414,11 @@ export class UserServiceService {
   }
 
   async getDepartmentLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
-    const limit = Math.max(1, query.limit ?? 100);
-    const offset = Math.max(0, query.offset ?? 0);
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
     const where = this.buildSearchWhere(query.search, [
       'department_code',
       'department_name_eng',
@@ -436,8 +447,11 @@ export class UserServiceService {
   }
 
   async getDesignationLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
-    const limit = Math.max(1, query.limit ?? 100);
-    const offset = Math.max(0, query.offset ?? 0);
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
     const where = this.buildSearchWhere(query.search, [
       'designation_code',
       'designation_eng',
@@ -466,8 +480,11 @@ export class UserServiceService {
   }
 
   async getOrganizationLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
-    const limit = Math.max(1, query.limit ?? 100);
-    const offset = Math.max(0, query.offset ?? 0);
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
     const where = this.buildSearchWhere(query.search, [
       'organization_code',
       'organization_eng',
@@ -497,8 +514,11 @@ export class UserServiceService {
   }
 
   async getCitizenshipLookups(query: { search?: string; limit?: number; offset?: number } = {}) {
-    const limit = Math.max(1, query.limit ?? 100);
-    const offset = Math.max(0, query.offset ?? 0);
+    const { take: limit, skip: offset } = this.normalizePagination(
+      query.limit,
+      query.offset,
+      100,
+    );
     const where = this.buildSearchWhere(query.search, [
       'citizenship_code',
       'citizenship_eng',
