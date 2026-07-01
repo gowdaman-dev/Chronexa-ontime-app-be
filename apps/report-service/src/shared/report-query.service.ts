@@ -44,6 +44,7 @@ export class ReportQueryService {
   }
 
   buildSpWhere(query: Record<string, any> = {}, scope?: ReportRoleScope) {
+    query = this.normalizeReportQuery(query);
     const conditions: string[] = [`EmployeeStatus='Active'`];
 
     if (query.from_date) {
@@ -54,7 +55,7 @@ export class ReportQueryService {
       const toDate = String(query.to_date).slice(0, 10);
       conditions.push(`CAST(WorkDate AS DATE) <= CAST('${toDate}' AS DATE)`);
     }
-    if (query.date) {
+    if (query.date && !this.hasReportDateRange(query)) {
       const date = String(query.date).slice(0, 10);
       conditions.push(`CAST(WorkDate AS DATE) = CAST('${date}' AS DATE)`);
     }
@@ -118,6 +119,7 @@ export class ReportQueryService {
     query: Record<string, any> = {},
     scope?: ReportRoleScope,
   ): Prisma.Sql {
+    query = this.normalizeReportQuery(query);
     const conditions: Prisma.Sql[] = [Prisma.sql`EmployeeStatus='Active'`];
 
     if (query.from_date) {
@@ -132,7 +134,7 @@ export class ReportQueryService {
         Prisma.sql`CAST(WorkDate AS DATE) <= CAST(${toDate} AS DATE)`,
       );
     }
-    if (query.date) {
+    if (query.date && !this.hasReportDateRange(query)) {
       const date = String(query.date).slice(0, 10);
       conditions.push(Prisma.sql`CAST(WorkDate AS DATE) = CAST(${date} AS DATE)`);
     }
@@ -208,42 +210,147 @@ export class ReportQueryService {
     return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
   }
 
+  private shouldInterleaveDaysByEmployee(query: Record<string, any>, scope?: ReportRoleScope) {
+    if (!this.hasReportDateRange(query)) return false;
+    const pagination = this.common.parseReportPagination(query);
+    if (pagination.unlimited) return false;
+    const scopedEmployeeId =
+      scope?.employeeId ?? this.common.resolveEmployeeId(query);
+    if (scopedEmployeeId) return false;
+    const employeeIds = this.common.parseNumberArray(
+      query.employee_ids ?? query.employeeIds,
+    );
+    if (employeeIds.length === 1) return false;
+    return true;
+  }
+
   async querySpEmployeeDailyReport(
     query: Record<string, any> = {},
     scope?: ReportRoleScope,
   ) {
+    query = this.normalizeReportQuery(query);
     const whereClause = this.buildSpWhereSql(query, scope);
     const pagination = this.common.parseReportPagination(query);
     const pagingSql = pagination.unlimited
       ? Prisma.empty
       : Prisma.sql` OFFSET ${pagination.skip} ROWS FETCH NEXT ${pagination.take} ROWS ONLY`;
-    const dataQuery = Prisma.sql`
-      SELECT * FROM [dbo].[sp_employee_daily_report]
-      ${whereClause}
-      ORDER BY WorkDate DESC, EmployeeID${pagingSql}
-    `;
+    const interleave = this.shouldInterleaveDaysByEmployee(query, scope);
+    const dataQuery = interleave
+      ? Prisma.sql`
+          SELECT * FROM (
+            SELECT
+              src.*,
+              ROW_NUMBER() OVER (
+                PARTITION BY CAST(src.WorkDate AS DATE)
+                ORDER BY src.EmployeeID ASC
+              ) AS __day_rn
+            FROM [dbo].[sp_employee_daily_report] src
+            ${whereClause}
+          ) ranked
+          ORDER BY ranked.__day_rn ASC, ranked.WorkDate DESC, ranked.EmployeeID ASC
+          ${pagingSql}
+        `
+      : Prisma.sql`
+          SELECT * FROM [dbo].[sp_employee_daily_report]
+          ${whereClause}
+          ORDER BY WorkDate DESC, EmployeeID ASC
+          ${pagingSql}
+        `;
     const countQuery = Prisma.sql`
       SELECT COUNT(*) as cnt FROM [dbo].[sp_employee_daily_report]
       ${whereClause}
     `;
-    const [data, countResult] = await Promise.all([
+    const [rawData, countResult] = await Promise.all([
       this.prisma.$queryRaw<any[]>(dataQuery),
       this.prisma.$queryRaw<any[]>(countQuery),
     ]);
+    const data = interleave
+      ? rawData.map(({ __day_rn, ...row }) => row)
+      : rawData;
     const total = countResult?.[0]
       ? Number(countResult[0].cnt ?? countResult[0].COUNT ?? 0)
       : 0;
     const hasNext = pagination.unlimited
       ? false
       : pagination.skip + data.length < total;
-    return { data, total, hasNext };
+    return { data: this.formatReportRows(data), total, hasNext };
+  }
+
+  /** Format SQL date/datetime values as YYYY-MM-DD for API/HTML/PDF output. */
+  formatReportDateValue(value: unknown) {
+    if (value === null || value === undefined || value === '') return value;
+    if (value instanceof Date) {
+      const year = value.getUTCFullYear();
+      const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(value.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    const text = String(value);
+    const isoDate = text.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoDate) return isoDate[1];
+    return value;
+  }
+
+  formatReportRows(rows: any[] = []) {
+    const dateFields = ['WorkDate', 'SnapshotDate'];
+    return rows.map((row) => {
+      const formatted = { ...row };
+      for (const field of dateFields) {
+        if (field in formatted) {
+          formatted[field] = this.formatReportDateValue(formatted[field]);
+        }
+      }
+      return formatted;
+    });
   }
 
   private sliceDate(value: unknown) {
     return value ? String(value).slice(0, 10) : undefined;
   }
 
+  /** Parse YYYY-MM-DD without UTC timezone shift (avoids off-by-one on servers west of UTC). */
+  private parseDateOnly(value: unknown): Date | undefined {
+    const text = this.sliceDate(value);
+    if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined;
+    const [year, month, day] = text.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  /**
+   * Normalize report query params: aliases, ISO date strings, and drop exact `date`
+   * when a range (from_date/to_date) is present so SQL does not over-restrict rows.
+   */
+  normalizeReportQuery(query: Record<string, any> = {}) {
+    const normalized = { ...query };
+    const from =
+      this.sliceDate(
+        normalized.from_date ?? normalized.fromDate ?? normalized.startDate,
+      );
+    const to = this.sliceDate(
+      normalized.to_date ?? normalized.toDate ?? normalized.endDate,
+    );
+    if (from) normalized.from_date = from;
+    else delete normalized.from_date;
+    if (to) normalized.to_date = to;
+    else delete normalized.to_date;
+    delete normalized.fromDate;
+    delete normalized.toDate;
+    delete normalized.startDate;
+    delete normalized.endDate;
+    if (from || to) {
+      delete normalized.date;
+    } else if (normalized.date) {
+      normalized.date = this.sliceDate(normalized.date);
+    }
+    return normalized;
+  }
+
+  hasReportDateRange(query: Record<string, any> = {}) {
+    return Boolean(query.from_date || query.to_date);
+  }
+
   resolveReportDateFilters(query: Record<string, any> = {}) {
+    query = this.normalizeReportQuery(query);
     const range: { from_date?: string; to_date?: string; date?: string } = {};
     if (query.from_date) range.from_date = this.sliceDate(query.from_date);
     if (query.to_date) range.to_date = this.sliceDate(query.to_date);
@@ -280,6 +387,7 @@ export class ReportQueryService {
     period: 'daily' | 'weekly' | 'monthly',
     query: Record<string, any> = {},
   ) {
+    query = this.normalizeReportQuery(query);
     if (query.from_date || query.to_date) {
       return this.resolveReportDateFilters(query);
     }
@@ -287,7 +395,10 @@ export class ReportQueryService {
       return {};
     }
 
-    const anchor = new Date(String(query.date));
+    const anchor = this.parseDateOnly(query.date);
+    if (!anchor) {
+      return {};
+    }
     const start = new Date(anchor);
     const end = new Date(anchor);
 

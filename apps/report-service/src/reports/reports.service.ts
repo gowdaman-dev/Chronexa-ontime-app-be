@@ -42,7 +42,7 @@ export class ReportsService {
     payload: { query: any; user: any },
   ) {
     return this.run(period, async () => {
-      const baseQuery = payload.query ?? {};
+      const baseQuery = this.reportQuery.normalizeReportQuery(payload.query ?? {});
       const range = this.reportQuery.resolveDateRange(period, baseQuery);
       const format = String(baseQuery.format ?? 'json').toLowerCase();
       const query = { ...baseQuery, ...range };
@@ -84,7 +84,7 @@ export class ReportsService {
 
   private async attendanceReport(payload: { query: any; user: any }) {
     return this.run('attendance', async () => {
-      const query = payload.query ?? {};
+      const query = this.reportQuery.normalizeReportQuery(payload.query ?? {});
       const format = String(query.format ?? 'json').toLowerCase();
       const dateMeta = this.reportQuery.reportDateMeta(query);
       const scope = this.roleScope(payload.user, query);

@@ -205,4 +205,69 @@ describe('ReportQueryService date filters (old /report/attendance behaviour)', (
     expect(where).toContain("CostCode = 'IT-OPS'");
     expect(where).toContain("CostCenter = 'CC-IT-001'");
   });
+
+  it('ignores exact date when from_date/to_date range is also sent', () => {
+    const where = service.buildSpWhere({
+      from_date: '2026-06-01',
+      to_date: '2026-06-30',
+      date: '2026-06-02',
+    });
+    expect(where).toContain("CAST(WorkDate AS DATE) >= CAST('2026-06-01' AS DATE)");
+    expect(where).toContain("CAST(WorkDate AS DATE) <= CAST('2026-06-30' AS DATE)");
+    expect(where).not.toMatch(/WorkDate AS DATE\) = CAST/);
+  });
+
+  it('normalizes fromDate/toDate aliases and drops conflicting date', () => {
+    expect(
+      service.normalizeReportQuery({
+        fromDate: '2026-06-22T00:00:00.000Z',
+        toDate: '2026-06-28',
+        date: '2026-06-22',
+      }),
+    ).toEqual({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+    });
+  });
+
+  it('uses interleaved day ordering for team range queries with pagination', async () => {
+    common.parseReportPagination.mockReturnValue({
+      unlimited: false,
+      offset: 1,
+      skip: 0,
+      take: 10,
+    });
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ EmployeeID: 1 }])
+      .mockResolvedValueOnce([{ cnt: 1 }]);
+
+    await service.querySpEmployeeDailyReport(
+      {
+        from_date: '2026-06-22',
+        to_date: '2026-06-28',
+        limit: 10,
+        offset: 1,
+      },
+      { managerId: 74026 },
+    );
+
+    const sql = sqlText();
+    expect(sql).toContain('ROW_NUMBER()');
+    expect(sql).toContain('__day_rn');
+  });
+
+  it('formats WorkDate as YYYY-MM-DD instead of UTC timestamp', () => {
+    expect(
+      service.formatReportDateValue(new Date('2026-06-28T00:00:00.000Z')),
+    ).toBe('2026-06-28');
+    expect(service.formatReportDateValue('2026-06-28T00:00:00.000Z')).toBe(
+      '2026-06-28',
+    );
+    expect(
+      service.formatReportRows([
+        { EmployeeID: 1, WorkDate: new Date('2026-06-22T00:00:00.000Z') },
+      ]),
+    ).toEqual([{ EmployeeID: 1, WorkDate: '2026-06-22' }]);
+  });
 });

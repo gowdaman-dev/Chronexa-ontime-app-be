@@ -281,11 +281,15 @@ export function ApiReportFilters() {
       'WorkDate lower bound (YYYY-MM-DD). Independent filter — omit for no lower bound. No implicit today default.',
       { example: '2025-01-01' },
     ),
+    q('fromDate', 'Alias for from_date', { example: '2025-01-01' }),
+    q('startDate', 'Alias for from_date', { example: '2025-01-01' }),
     q(
       'to_date',
       'WorkDate upper bound (YYYY-MM-DD). Independent filter — omit for no upper bound. No implicit today default.',
       { example: '2025-06-30' },
     ),
+    q('toDate', 'Alias for to_date', { example: '2025-06-30' }),
+    q('endDate', 'Alias for to_date', { example: '2025-06-30' }),
     q(
       'date',
       'Anchor date (YYYY-MM-DD). Expands to period range for daily/weekly/monthly reports when from_date/to_date are omitted.',

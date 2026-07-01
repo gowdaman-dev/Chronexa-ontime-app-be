@@ -6,6 +6,7 @@ describe('ReportsService', () => {
 
   beforeEach(() => {
     reportQuery = {
+      normalizeReportQuery: jest.fn((query: Record<string, any> = {}) => ({ ...query })),
       resolveDateRange: jest.fn(() => ({
         from_date: '2025-06-01',
         to_date: '2025-06-07',
