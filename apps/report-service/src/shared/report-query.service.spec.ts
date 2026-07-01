@@ -81,6 +81,60 @@ describe('ReportQueryService pagination', () => {
       ? sqlArg.strings.join('')
       : String(sqlArg);
     expect(sql).not.toContain('OFFSET');
+    expect(sql).not.toContain('__day_rn');
+  });
+
+  it('interleaves days across employees for paginated team date ranges', async () => {
+    common.parseReportPagination.mockReturnValue({
+      unlimited: false,
+      offset: 1,
+      skip: 0,
+      take: 10,
+    });
+    common.resolveEmployeeId.mockReturnValue(undefined);
+
+    await service.querySpEmployeeDailyReport({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+      limit: 10,
+      offset: 1,
+    });
+
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    const sql = Array.isArray(sqlArg?.strings)
+      ? sqlArg.strings.join('')
+      : String(sqlArg);
+    expect(sql).toContain('__day_rn');
+    expect(sql).toContain('PARTITION BY CAST(src.WorkDate AS DATE)');
+    expect(sql).toContain('ORDER BY ranked.__day_rn ASC');
+  });
+
+  it('does not interleave when a single employee is scoped', async () => {
+    common.parseReportPagination.mockReturnValue({
+      unlimited: false,
+      offset: 1,
+      skip: 0,
+      take: 10,
+    });
+    common.resolveEmployeeId.mockReturnValue(7755);
+
+    await service.querySpEmployeeDailyReport(
+      {
+        from_date: '2026-06-22',
+        to_date: '2026-06-28',
+        employee_id: 7755,
+        limit: 10,
+        offset: 1,
+      },
+      { employeeId: 7755 },
+    );
+
+    const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+    const sql = Array.isArray(sqlArg?.strings)
+      ? sqlArg.strings.join('')
+      : String(sqlArg);
+    expect(sql).not.toContain('__day_rn');
+    expect(sql).toContain('ORDER BY WorkDate DESC');
   });
 });
 
@@ -204,5 +258,47 @@ describe('ReportQueryService date filters (old /report/attendance behaviour)', (
     });
     expect(where).toContain("CostCode = 'IT-OPS'");
     expect(where).toContain("CostCenter = 'CC-IT-001'");
+  });
+
+  it('normalizeReportQuery maps fromDate/toDate aliases and drops date when range is set', () => {
+    expect(
+      service.normalizeReportQuery({
+        fromDate: '2026-06-01',
+        toDate: '2026-06-30',
+        date: '2026-06-15',
+      }),
+    ).toEqual({
+      from_date: '2026-06-01',
+      to_date: '2026-06-30',
+    });
+  });
+
+  it('formats WorkDate as YYYY-MM-DD instead of UTC timestamps', async () => {
+    prisma.$queryRaw
+      .mockReset()
+      .mockResolvedValueOnce([
+        {
+          EmployeeID: 7755,
+          WorkDate: new Date('2026-06-28T00:00:00.000Z'),
+          SnapshotDate: '2026-06-28T00:00:00.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([{ cnt: 1 }]);
+    common.parseReportPagination.mockReturnValue({
+      unlimited: true,
+      offset: 1,
+      skip: 0,
+      take: 0,
+    });
+
+    const result = await service.querySpEmployeeDailyReport({
+      from_date: '2026-06-22',
+      to_date: '2026-06-28',
+      unlimited: 'true',
+    });
+
+    expect(result.data[0].WorkDate).toBe('2026-06-28');
+    expect(result.data[0].WorkDate).not.toContain('T');
+    expect(result.data[0].SnapshotDate).toBe('2026-06-28');
   });
 });
